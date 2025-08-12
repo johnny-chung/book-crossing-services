@@ -41,5 +41,5 @@ bin/
 ### Mac OS ###
 .DS_Store
 
-# mongo setting
-application-mongo.yml
+
+*.env

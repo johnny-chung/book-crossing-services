@@ -1,0 +1,7 @@
+spring:
+  data:
+    mongodb:
+      uri: ${MONGO_URI}
+      database: messagedb
+      uuid-representation: standard
+      auto-index-creation: true

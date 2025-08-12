@@ -1,0 +1,7 @@
+spring:
+  data:
+    mongodb:
+      uri: ${MONGO_URI}
+      database: memberdb
+      uuid-representation: standard
+      auto-index-creation: true

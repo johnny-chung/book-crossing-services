@@ -1,0 +1,7 @@
+spring:
+  data:
+    mongodb:
+      uri: ${MONGO_URI}
+      database: orderdb
+      uuid-representation: standard
+      auto-index-creation: true
