@@ -1,0 +1,12 @@
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${AUTH0_ISSUER}
+          jwk-set-uri: ${JWT_SET_URI}
+          audiences:
+            - https://bookcrossing.goodmanltd.com
+
+google:
+  apiKey: ${GOOGLE_API_KEY}

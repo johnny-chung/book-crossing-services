@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:orderDb;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver  # JDBC driver for H2, bridge between java and H2
+    username: sa  # default username
+    password:  # blank -> no pw
+    platform: h2
+  h2:
+    console:
+      enabled: true
+      path: /h2-console  #optional, default is /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: update  # auto create/ update db schema base on entity class
+    show-sql: true  # enable logging of sql queries generate by jpa
+    database-platform: org.hibernate.dialect.H2Dialect # jpa to use H2 sql
