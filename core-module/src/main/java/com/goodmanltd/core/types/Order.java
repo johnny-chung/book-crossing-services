@@ -12,7 +12,6 @@ public class Order {
 	private UUID id;
 	private MemberReference orderBy;
 	private PostReference postRef;
-
 	private LocalDateTime createdAt;
 	private LocalDateTime completedAt;
 	private OrderStatus orderStatus;

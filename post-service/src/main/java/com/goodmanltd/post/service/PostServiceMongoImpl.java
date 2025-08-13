@@ -1,5 +1,7 @@
 package com.goodmanltd.post.service;
 
+import com.goodmanltd.core.dao.mongo.entity.mapper.MemberMongoMapper;
+import com.goodmanltd.core.exceptions.NotAuthorizedException;
 import com.goodmanltd.core.types.Book;
 import com.goodmanltd.core.types.Post;
 import com.goodmanltd.core.dto.command.CreateBookCommand;
@@ -7,17 +9,17 @@ import com.goodmanltd.core.dto.events.PostCreatedEvent;
 import com.goodmanltd.core.exceptions.EntityNotFoundException;
 import com.goodmanltd.core.kafka.KafkaTopics;
 import com.goodmanltd.core.types.PostStatus;
-import com.goodmanltd.post.dao.mongo.entity.BookMongoEntity;
-import com.goodmanltd.post.dao.mongo.entity.MemberMongoEntity;
+import com.goodmanltd.core.dao.mongo.entity.BookMongoEntity;
+import com.goodmanltd.core.dao.mongo.entity.MemberMongoEntity;
 import com.goodmanltd.post.dao.mongo.entity.PendingPostMongoEntity;
-import com.goodmanltd.post.dao.mongo.entity.PostMongoEntity;
-import com.goodmanltd.post.dao.mongo.entity.mapper.BookMongoMapper;
+import com.goodmanltd.core.dao.mongo.entity.PostMongoEntity;
+import com.goodmanltd.core.dao.mongo.entity.mapper.BookMongoMapper;
 import com.goodmanltd.post.dao.mongo.entity.mapper.PendingPostMongoMapper;
-import com.goodmanltd.post.dao.mongo.entity.mapper.PostMongoMapper;
-import com.goodmanltd.post.dao.mongo.repository.BookMongoRepository;
-import com.goodmanltd.post.dao.mongo.repository.MemberMongoRepository;
+import com.goodmanltd.core.dao.mongo.entity.mapper.PostMongoMapper;
+import com.goodmanltd.core.dao.mongo.repository.BookMongoRepository;
+import com.goodmanltd.core.dao.mongo.repository.MemberMongoRepository;
 import com.goodmanltd.post.dao.mongo.repository.PendingPostMongoRepository;
-import com.goodmanltd.post.dao.mongo.repository.PostMongoRepository;
+import com.goodmanltd.core.dao.mongo.repository.PostMongoRepository;
 import com.goodmanltd.post.dto.CreatePostRequest;
 import com.goodmanltd.post.dto.GetPostDetailsResponse;
 import org.slf4j.Logger;
@@ -29,6 +31,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -59,7 +62,7 @@ public class PostServiceMongoImpl implements PostService{
 	@Override
 	public Post createPost(CreatePostRequest request) {
 
-		//to-do
+
 		// check member existence
 		Optional<MemberMongoEntity> existingMember = memberRepo.findById(request.getPostBy());
 		if (existingMember.isEmpty()) {
@@ -83,9 +86,11 @@ public class PostServiceMongoImpl implements PostService{
 			pendingPost.setId(UUID.randomUUID());
 			// set isbn for later on update when book created
 			pendingPost.setIsbn(request.getIsbn());
-			pendingPost.setPostBy(request.getPostBy());
+			pendingPost.setPostBy(MemberMongoMapper.toMemberRef(existingMember.get()));
+
 			pendingPost.setLocation(request.getLocation());
 			pendingPost.setRemarks(request.getRemarks());
+
 			pendingPost.setCreatedAt(LocalDateTime.now());
 			pendingPost.setPostStatus(PostStatus.AVAILABLE);
 
@@ -99,11 +104,8 @@ public class PostServiceMongoImpl implements PostService{
 		PostMongoEntity newPostEntity = new PostMongoEntity();
 
 		newPostEntity.setId(UUID.randomUUID());
-		newPostEntity.setPostBy(request.getPostBy());
-		newPostEntity.setPosterName(existingMember.get().getName());
-		newPostEntity.setBookId(existingBook.get().getId());
-		newPostEntity.setBookTitle(existingBook.get().getTitle());
-		newPostEntity.setThumbnail(existingBook.get().getThumbnail());
+		newPostEntity.setPostBy(MemberMongoMapper.toMemberRef(existingMember.get()));
+		newPostEntity.setBookRef(BookMongoMapper.toBookRef(existingBook.get()));
 		newPostEntity.setLocation(request.getLocation());
 		newPostEntity.setRemarks(request.getRemarks());
 		newPostEntity.setCreatedAt(LocalDateTime.now());
@@ -112,17 +114,8 @@ public class PostServiceMongoImpl implements PostService{
 		PostMongoEntity saved = postRepository.save(newPostEntity);
 
 		// kafka
-		PostCreatedEvent createNewPost = new PostCreatedEvent(
-				saved.getId(),
-				saved.getPostBy(),
-				saved.getBookId(),
-				saved.getBookTitle(),
-				saved.getThumbnail(),
-				saved.getLocation(),
-				saved.getRemarks(),
-				saved.getCreatedAt(),
-				saved.getPostStatus()
-		);
+		PostCreatedEvent createNewPost = new PostCreatedEvent();
+		BeanUtils.copyProperties(saved, createNewPost);
 
 		kafkaTemplate.send(KafkaTopics.POST_CREATED, createNewPost);
 
@@ -138,33 +131,33 @@ public class PostServiceMongoImpl implements PostService{
 		if (post.isEmpty()) return Optional.empty();
 
 		BeanUtils.copyProperties(post, response);
-		Optional<Book> book = bookRepository.findById(post.get().getBookId()).map(BookMongoMapper::toBook);
+		Optional<Book> book = bookRepository.findById(post.get().getBookRef().getId()).map(BookMongoMapper::toBook);
 		book.ifPresent(response::setBookDetails);
 
 		return Optional.of(response);
 	}
 
 	@Override
-	public Optional<GetPostDetailsResponse> findByOrderId(UUID orderId) {
+	public Optional<List<Post>> findByOrderId(UUID orderId) {
 
-		GetPostDetailsResponse response = new GetPostDetailsResponse();
-		Optional<Post> post = postRepository.findByOrderId(orderId).map(PostMongoMapper::toPost);
 
-		if (post.isEmpty()) return Optional.empty();
+		List<PostMongoEntity> postEntityList = postRepository.findByOrderRef_Id(orderId);
 
-		BeanUtils.copyProperties(post, response);
-		Optional<Book> book = bookRepository.findById(post.get().getBookId()).map(BookMongoMapper::toBook);
-		book.ifPresent(response::setBookDetails);
+		if (postEntityList.isEmpty()) return Optional.empty();
 
-		return Optional.of(response);
+		List<Post> dtoList = postEntityList.stream().map(PostMongoMapper::toPost).toList();
+		return dtoList.isEmpty()? Optional.empty(): Optional.of(dtoList);
 	}
 
 	@Override
-	public Optional<List<Post>> findByPostBy(UUID memberId) {
-		List<PostMongoEntity> entities = postRepository.findByPostBy(memberId);
+	public Optional<List<Post>> findMemberPost(String auth0Id) {
+
+
+		List<PostMongoEntity> entities = postRepository.findByPostBy_Auth0Id(auth0Id);
 		List<Post> dtoList = entities.stream().map(PostMongoMapper::toPost).toList();
 		return dtoList.isEmpty()? Optional.empty(): Optional.of(dtoList);
 	}
+
 
 	@Override
 	public Optional<List<Post>> findByAvailable() {

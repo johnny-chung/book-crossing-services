@@ -11,6 +11,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -47,9 +51,29 @@ public class PostController {
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found"));
 	}
 
+	@GetMapping("/my-posts")
+	@PreAuthorize("isAuthenticated()")
+	public List<Post> getPostDetails(@AuthenticationPrincipal Jwt jwt) {
+		String auth0Id = jwt.getClaimAsString("sub");
+		return postService.findMemberPost(auth0Id)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found"));
+	}
+
+	@GetMapping("/available")
+	public List<Post> getAvailablePosts() {
+		return postService.findByAvailable()
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Postd not found"));
+	}
+
+
 	@GetMapping("/all")
 	public List<Post> getAll(){
 		return postService.findAll()
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Posts not found"));
+	}
+
+	@GetMapping("/health")
+	public ResponseEntity<String> healthCheck() {
+		return ResponseEntity.ok("Post Service is healthy");
 	}
 }

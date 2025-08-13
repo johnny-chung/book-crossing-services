@@ -1,6 +1,8 @@
 package com.goodmanltd.core.dto.events;
 
+import com.goodmanltd.core.types.MemberReference;
 import com.goodmanltd.core.types.OrderStatus;
+import com.goodmanltd.core.types.PostReference;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,8 +14,8 @@ import java.util.UUID;
 @AllArgsConstructor
 public class OrderCompletedEvent {
 	private UUID id;
-	private UUID postId;
-	private UUID memberId;
+	private PostReference postRef;
+	private MemberReference orderBy;
 	private OrderStatus orderStatus;
 	private LocalDateTime completedAt;
 }

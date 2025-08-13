@@ -6,8 +6,8 @@ import com.goodmanltd.core.exceptions.RetryableException;
 import com.goodmanltd.core.kafka.KafkaTopics;
 import com.goodmanltd.core.types.OrderStatus;
 import com.goodmanltd.core.types.PostStatus;
-import com.goodmanltd.post.dao.mongo.entity.PostMongoEntity;
-import com.goodmanltd.post.dao.mongo.repository.PostMongoRepository;
+import com.goodmanltd.core.dao.mongo.entity.PostMongoEntity;
+import com.goodmanltd.core.dao.mongo.repository.PostMongoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -44,11 +44,12 @@ public class OrderCompletedMongoEventHandler {
 		LOGGER.info("Post service receive order completed event: " + orderCompletedEvent.getId());
 
 		// check if post exist
-		Optional<PostMongoEntity> existingRecord = postRepository.findById(orderCompletedEvent.getPostId());
+		Optional<PostMongoEntity> existingRecord = postRepository.findById(
+				orderCompletedEvent.getPostRef().getId());
 
 		if (existingRecord.isEmpty()) {
-			LOGGER.error("Post {} not found", orderCompletedEvent.getPostId());
-			throw new RetryableException("Post " + orderCompletedEvent.getPostId() + " not found");
+			LOGGER.error("Post {} not found", orderCompletedEvent.getPostRef().getId());
+			throw new RetryableException("Post " + orderCompletedEvent.getPostRef().getId() + " not found");
 		}
 
 		// to-do
@@ -59,10 +60,7 @@ public class OrderCompletedMongoEventHandler {
 		BeanUtils.copyProperties(existingRecord.get(), updatedEntity);
 
 		updatedEntity.setId(existingRecord.get().getId());
-		updatedEntity.setOrderId(orderCompletedEvent.getId());
-		updatedEntity.setReservedBy(orderCompletedEvent.getMemberId());
 		updatedEntity.setPostStatus(PostStatus.COMPLETED);
-		updatedEntity.setOrderStatus(OrderStatus.COMPLETED);
 
 		try {
 

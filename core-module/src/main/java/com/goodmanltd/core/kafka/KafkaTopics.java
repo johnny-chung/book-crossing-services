@@ -12,10 +12,13 @@ public class KafkaTopics {
 	public static final String ORDER_CREATED = "order-created-events-topic";
 	public static final String ORDER_PENDING = "order-pending-events-topic";
 	public static final String ORDER_COMPLETED = "order-completed-events-topic";
+	public static final String ORDER_CANCELLED = "order-cancelled-events-topic";
+
 
 	public static final String POST_CREATED = "post-created-events-topic";
 	public static final String POST_UPDATED = "post-updated-events-topic";
 	public static final String POST_RESERVED = "post-reserved-events-topic";
+	public static final String POST_COMPLETED = "post-completed-events-topic";
 
 	public static final String MESSAGE_CREATED = "message-created-events-topic";
 

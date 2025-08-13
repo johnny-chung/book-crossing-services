@@ -43,3 +43,6 @@ bin/
 
 
 *.env
+
+application-local.yml
+

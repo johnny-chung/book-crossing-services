@@ -1,18 +1,20 @@
 package com.goodmanltd.message.web.controller;
 
 import com.goodmanltd.core.types.Message;
-import com.goodmanltd.message.dto.CreateMessageRequest;
-import com.goodmanltd.message.dto.CreateMessageResponse;
-import com.goodmanltd.message.dto.GetConversationRequest;
-import com.goodmanltd.message.dto.GetConversationResponse;
+import com.goodmanltd.message.dto.*;
 import com.goodmanltd.message.service.MessageService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -50,5 +52,29 @@ public class MessageController {
 				new GetConversationRequest(postId, participantId, 25, page, nextMsgId);
 		return messageService.getConversation(request);
 
+	}
+
+	@GetMapping("/conversation-list/{postId}")
+	@PreAuthorize("isAuthenticated()")
+	public GetParticipantListByPost getParticipantListByPost(
+			@PathVariable UUID postId,
+			@AuthenticationPrincipal Jwt jwt
+	) {
+		String auth0Id = jwt.getClaimAsString("sub");
+		return messageService.getParticipantListByPost(postId, auth0Id);
+	}
+
+	@GetMapping("/member/conversation-list")
+	@PreAuthorize("isAuthenticated()")
+	public List<GetParticipantListByPost> getParticipantListByAuth0Id(
+			@AuthenticationPrincipal Jwt jwt
+	) {
+		String auth0Id = jwt.getClaimAsString("sub");
+		return messageService.getParticipantListByAuth0Id(auth0Id);
+	}
+
+	@GetMapping("/health")
+	public ResponseEntity<String> healthCheck() {
+		return ResponseEntity.ok("Message Service is healthy");
 	}
 }

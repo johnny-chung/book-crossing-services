@@ -8,9 +8,9 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BookCreatedEvent {
-	private UUID bookId;
+	private UUID id;
 	private String title;
-	private String author;
+	private String authors;
 	private String isbn;
 	private String language;
 	private String category;

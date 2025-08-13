@@ -2,13 +2,14 @@ package com.goodmanltd.member.service.handler;
 
 import com.goodmanltd.core.dto.events.MemberUpdatedEvent;
 import com.goodmanltd.core.dto.events.OrderCreatedEvent;
+import com.goodmanltd.core.dto.events.mapper.OrderEventMapper;
 import com.goodmanltd.core.exceptions.NotRetryableException;
 import com.goodmanltd.core.exceptions.RetryableException;
 import com.goodmanltd.core.kafka.KafkaTopics;
-import com.goodmanltd.member.dao.mongo.entity.MemberMongoEntity;
-import com.goodmanltd.member.dao.mongo.entity.OrderMongoEntity;
-import com.goodmanltd.member.dao.mongo.repository.MemberMongoRepository;
-import com.goodmanltd.member.dao.mongo.repository.OrderMongoRepository;
+import com.goodmanltd.core.dao.mongo.entity.MemberMongoEntity;
+import com.goodmanltd.core.dao.mongo.entity.OrderMongoEntity;
+import com.goodmanltd.core.dao.mongo.repository.MemberMongoRepository;
+import com.goodmanltd.core.dao.mongo.repository.OrderMongoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -46,30 +47,30 @@ public class OrderCreatedMongoEventHandler {
 	public void handle(@Payload OrderCreatedEvent orderCreatedEvent) {
 
 
-		LOGGER.info("Member service receive order created event: " + orderCreatedEvent.getOrderId());
+		LOGGER.info("Member service receive order created event: " + orderCreatedEvent.getId());
 
 		// check if order exist
-		Optional<OrderMongoEntity> existingRecord = orderRepository.findById(orderCreatedEvent.getOrderId());
+		Optional<OrderMongoEntity> existingRecord = orderRepository.findById(orderCreatedEvent.getId());
 
 		if (existingRecord.isPresent()) {
-			LOGGER.error("Order {} duplicated", orderCreatedEvent.getOrderId());
-			throw new RetryableException("Member Service: Order " + orderCreatedEvent.getOrderId() + " duplicated");
+			LOGGER.error("Order {} duplicated", orderCreatedEvent.getId());
+			throw new RetryableException("Member Service: Order " + orderCreatedEvent.getId() + " duplicated");
 		}
 
 
 		// check if member exist
-		Optional<MemberMongoEntity> existingMember = memberRepo.findById(orderCreatedEvent.getMemberId());
+		Optional<MemberMongoEntity> existingMember = memberRepo.findById(orderCreatedEvent.getOrderBy().getId());
 		if (existingMember.isEmpty()) {
-			LOGGER.error("Member {} not found", orderCreatedEvent.getMemberId());
+			LOGGER.error("Member {} not found", orderCreatedEvent.getOrderBy().getId());
 			// to-do
 		} else {
 			// update member db
 			MemberMongoEntity updatedMemberEntity = new MemberMongoEntity();
 			BeanUtils.copyProperties(existingMember.get(), updatedMemberEntity);
-			// double confirm id is set
-			updatedMemberEntity.setId(orderCreatedEvent.getMemberId());
-			// update count
-			updatedMemberEntity.setReservedCount(existingMember.get().getReservedCount().intValue() + 1);
+			updatedMemberEntity.setId(orderCreatedEvent.getOrderBy().getId());
+			updatedMemberEntity.setReservationCnt(((MemberMongoEntity)existingMember.get()).getReservationCnt().intValue() + 1);
+			updatedMemberEntity.setAnnualTotalReservations(((MemberMongoEntity)existingMember.get()).getAnnualTotalReservations().intValue() + 1);
+
 
 			MemberMongoEntity saved = memberRepo.save(updatedMemberEntity);
 
@@ -84,11 +85,7 @@ public class OrderCreatedMongoEventHandler {
 
 
 		// update entity using info from order created event
-		OrderMongoEntity newEntity = new OrderMongoEntity();
-		newEntity.setId(orderCreatedEvent.getOrderId());
-		newEntity.setMemberId(orderCreatedEvent.getMemberId());
-		newEntity.setPostId(orderCreatedEvent.getPostId());
-		newEntity.setCreatedAt(orderCreatedEvent.getCreatedAt());
+		OrderMongoEntity newEntity = OrderEventMapper.createdEventToEntity(orderCreatedEvent);
 
 		try {
 

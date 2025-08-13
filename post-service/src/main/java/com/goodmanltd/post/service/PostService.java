@@ -14,9 +14,8 @@ public interface PostService {
 
 	Optional<GetPostDetailsResponse> findByPostId(UUID postId);
 
-	Optional<GetPostDetailsResponse> findByOrderId(UUID orderId);
-
-	Optional<List<Post>> findByPostBy(UUID memberId);
+	Optional<List<Post>> findByOrderId(UUID orderId);
+	Optional<List<Post>> findMemberPost(String auth0Id);
 
 	Optional<List<Post>> findByAvailable();
 

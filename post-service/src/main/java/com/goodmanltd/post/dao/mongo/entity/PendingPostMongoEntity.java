@@ -1,7 +1,6 @@
 package com.goodmanltd.post.dao.mongo.entity;
 
-import com.goodmanltd.core.types.OrderStatus;
-import com.goodmanltd.core.types.PostStatus;
+import com.goodmanltd.core.types.*;
 import jakarta.persistence.Id;
 import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
@@ -22,11 +21,14 @@ public class PendingPostMongoEntity {
 
 	@Id
 	private UUID id;
-	private UUID postBy;
 	private String isbn;
+
+	private MemberReference postBy;
+
 	private String location;
 	private String remarks;
 	private LocalDateTime createdAt;
+
 	private PostStatus postStatus;
 
 	@Version

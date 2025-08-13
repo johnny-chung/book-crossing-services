@@ -3,6 +3,7 @@ package com.goodmanltd.order.security;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
@@ -29,6 +30,8 @@ public class SecurityConfig {
 		http.authorizeHttpRequests(auth -> auth
 				//.requestMatchers(HttpMethod.POST, "/books").authenticated()
 				.requestMatchers("/orders/my-orders").authenticated()
+				.requestMatchers(HttpMethod.PUT, "/orders/*/completed").authenticated()
+				.requestMatchers(HttpMethod.PUT, "/orders/*/cancel").authenticated()
 				.anyRequest().permitAll()
 		)
 				.oauth2ResourceServer(resourceServer ->

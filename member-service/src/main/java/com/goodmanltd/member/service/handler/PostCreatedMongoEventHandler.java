@@ -4,8 +4,8 @@ import com.goodmanltd.core.dto.events.PostCreatedEvent;
 import com.goodmanltd.core.exceptions.NotRetryableException;
 import com.goodmanltd.core.exceptions.RetryableException;
 import com.goodmanltd.core.kafka.KafkaTopics;
-import com.goodmanltd.member.dao.mongo.entity.PostMongoEntity;
-import com.goodmanltd.member.dao.mongo.repository.PostMongoRepository;
+import com.goodmanltd.core.dao.mongo.entity.PostMongoEntity;
+import com.goodmanltd.core.dao.mongo.repository.PostMongoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -37,9 +37,10 @@ public class PostCreatedMongoEventHandler {
 	@Transactional
 	@KafkaHandler
 	public void handle(@Payload PostCreatedEvent postCreatedEvent) {
-		LOGGER.info("Member service receive new post created event: " + postCreatedEvent.getBookTitle());
+		LOGGER.info("Member service receive new post created event: " + postCreatedEvent.getId());
 
-		Optional<PostMongoEntity> existingRecord = postRepository.findById(postCreatedEvent.getPostId());
+		Optional<PostMongoEntity> existingRecord = postRepository.findById(
+				postCreatedEvent.getPostBy().getId());
 
 		if (existingRecord.isPresent()) {
 			LOGGER.info("Found a duplicate post id: {}", existingRecord.get().getId());
@@ -48,7 +49,7 @@ public class PostCreatedMongoEventHandler {
 
 		PostMongoEntity entity = new PostMongoEntity();
 		BeanUtils.copyProperties(postCreatedEvent, entity);
-		entity.setId(postCreatedEvent.getPostId());
+		entity.setId(postCreatedEvent.getId());
 
 		// version control
 		try {

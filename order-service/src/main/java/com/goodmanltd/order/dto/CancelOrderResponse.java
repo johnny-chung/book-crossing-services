@@ -1,0 +1,16 @@
+package com.goodmanltd.order.dto;
+
+import com.goodmanltd.core.types.OrderStatus;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+
+import java.util.UUID;
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class CancelOrderResponse {
+	private UUID orderId;
+	private OrderStatus orderStatus;
+}

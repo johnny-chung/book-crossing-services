@@ -1,9 +1,11 @@
 package com.goodmanltd.member.dto;
 
+import com.goodmanltd.core.types.MemberStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
@@ -11,5 +13,12 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateMemberResponse {
 	private UUID id;
+	private String auth0Id;
 	private String name;
+	private String email;
+	private Number rating;
+	private LocalDateTime createdAt;
+	private Number reservationCnt;
+	private Number annualTotalReservations;
+	private MemberStatus status;
 }

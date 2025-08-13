@@ -1,5 +1,7 @@
 package com.goodmanltd.core.dto.events;
 
+import com.goodmanltd.core.types.BookReference;
+import com.goodmanltd.core.types.MemberReference;
 import com.goodmanltd.core.types.PostStatus;
 import lombok.*;
 
@@ -10,11 +12,9 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 public class PostCreatedEvent {
-	private UUID postId;
-	private UUID postBy;
-	private UUID bookId;
-	private String bookTitle;
-	private String thumbnail;
+	private UUID id;
+	private MemberReference postBy;
+	private BookReference bookRef;
 	private String location;
 	private String remarks;
 	private LocalDateTime createdAt;

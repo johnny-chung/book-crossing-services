@@ -3,9 +3,9 @@ package com.goodmanltd.book.service;
 import com.goodmanltd.book.dto.GoogleBookVolRes;
 import com.goodmanltd.core.types.Book;
 import com.goodmanltd.core.dto.events.BookCreatedEvent;
-import com.goodmanltd.book.dao.mongo.entity.BookEntity;
-import com.goodmanltd.book.dao.mongo.entity.mapper.BookMapper;
-import com.goodmanltd.book.dao.mongo.repository.BookRepository;
+import com.goodmanltd.core.dao.mongo.entity.BookMongoEntity;
+import com.goodmanltd.core.dao.mongo.entity.mapper.BookMongoMapper;
+import com.goodmanltd.core.dao.mongo.repository.BookMongoRepository;
 import com.goodmanltd.book.dto.CreateBookRequest;
 import com.goodmanltd.core.exceptions.ExternalBookNotFoundException;
 import com.goodmanltd.core.kafka.KafkaTopics;
@@ -23,13 +23,13 @@ import java.util.UUID;
 @Service
 public class BookServiceMongoImpl implements BookService{
 
-	private final BookRepository bookRepository;
+	private final BookMongoRepository bookRepository;
 	private final KafkaTemplate<String, Object> kafkaTemplate;
 	private final GoogleBooksClient googleBooksClient;
 
 	private final Logger LOGGER = LoggerFactory.getLogger(this.getClass());
 
-	public BookServiceMongoImpl(BookRepository bookRepository, KafkaTemplate<String, Object> kafkaTemplate, GoogleBooksClient googleBooksClient) {
+	public BookServiceMongoImpl(BookMongoRepository bookRepository, KafkaTemplate<String, Object> kafkaTemplate, GoogleBooksClient googleBooksClient) {
 		this.bookRepository = bookRepository;
 		this.kafkaTemplate = kafkaTemplate;
 		this.googleBooksClient = googleBooksClient;
@@ -38,13 +38,13 @@ public class BookServiceMongoImpl implements BookService{
 	@Override
 	public Book createBook(CreateBookRequest request) {
 
-		Optional<BookEntity> existingEntity = bookRepository.findByIsbn(request.getIsbn());
+		Optional<BookMongoEntity> existingEntity = bookRepository.findByIsbn(request.getIsbn());
 		if (existingEntity.isPresent()) {
 			LOGGER.info("book {} already exist", request.getIsbn());
-			return BookMapper.toBook(existingEntity.get());
+			return BookMongoMapper.toBook(existingEntity.get());
 		}
 
-		BookEntity entity = new BookEntity();
+		BookMongoEntity entity = new BookMongoEntity();
 
 		entity.setId(UUID.randomUUID());
 		entity.setIsbn(request.getIsbn());
@@ -56,7 +56,7 @@ public class BookServiceMongoImpl implements BookService{
 
 			entity.setTitle(googleBook.getVolumeInfo().getTitle());
 
-			entity.setAuthor(String.join(", ", googleBook.getVolumeInfo().getAuthors()));
+			entity.setAuthors(String.join(", ", googleBook.getVolumeInfo().getAuthors()));
 
 			entity.setCategory(googleBook.getVolumeInfo().getMainCategory());
 
@@ -76,13 +76,13 @@ public class BookServiceMongoImpl implements BookService{
 		}
 
 
-		BookEntity saved = bookRepository.save(entity);
+		BookMongoEntity saved = bookRepository.save(entity);
 
 		// kafka
 		BookCreatedEvent createNewBook = new BookCreatedEvent(
 				saved.getId(),
 				saved.getTitle(),
-				saved.getAuthor(),
+				saved.getAuthors(),
 				saved.getIsbn(),
 				saved.getLanguage(),
 				saved.getCategory(),
@@ -100,7 +100,7 @@ public class BookServiceMongoImpl implements BookService{
 		return new Book(
 				saved.getId(),
 				saved.getTitle(),
-				saved.getAuthor(),
+				saved.getAuthors(),
 				saved.getIsbn(),
 				saved.getLanguage(),
 				saved.getCategory(),
@@ -114,7 +114,7 @@ public class BookServiceMongoImpl implements BookService{
 	@Override
 	public Optional<Book> findByBookId(UUID bookId) {
 		return bookRepository.findById(bookId)
-				.map(BookMapper::toBook);
+				.map(BookMongoMapper::toBook);
 	}
 
 //	@Override
@@ -127,7 +127,7 @@ public class BookServiceMongoImpl implements BookService{
 
 	@Override
 	public Optional<List<Book>> findAll() {
-		List<Book> dtoList = bookRepository.findAll().stream().map(BookMapper::toBook).toList();
+		List<Book> dtoList = bookRepository.findAll().stream().map(BookMongoMapper::toBook).toList();
 
 		return dtoList.isEmpty() ? Optional.empty() : Optional.of(dtoList);
 	}

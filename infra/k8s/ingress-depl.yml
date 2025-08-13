@@ -1,0 +1,47 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-srv
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: bookcrossing-api.goodmanltd.com
+      http:
+        paths:
+          - path: /books(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: book-service-srv
+                port:
+                  number: 8081
+          - path: /orders(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: order-service-srv
+                port:
+                  number: 8083
+          - path: /posts(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: post-service-srv
+                port:
+                  number: 8085
+          - path: /members(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: member-service-srv
+                port:
+                  number: 8087
+          - path: /messages(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: message-service-srv
+                port:
+                  number: 8089

@@ -1,38 +1,44 @@
 package com.goodmanltd.message.service;
 
+import com.goodmanltd.core.dao.mongo.entity.mapper.MemberMongoMapper;
+import com.goodmanltd.core.exceptions.NotAuthorizedException;
+import com.goodmanltd.core.types.MemberReference;
 import com.goodmanltd.core.types.Message;
 import com.goodmanltd.core.dto.events.MessageCreatedEvent;
 import com.goodmanltd.core.exceptions.EntityNotFoundException;
 import com.goodmanltd.core.exceptions.MemberNotVerifiedException;
 import com.goodmanltd.core.kafka.KafkaTopics;
 import com.goodmanltd.core.types.MemberStatus;
-import com.goodmanltd.message.dao.mongo.entity.MemberMongoEntity;
-import com.goodmanltd.message.dao.mongo.entity.MessageMongoEntity;
-import com.goodmanltd.message.dao.mongo.entity.PostMongoEntity;
-import com.goodmanltd.message.dao.mongo.entity.mapper.MessageMongoMapper;
-import com.goodmanltd.message.dao.mongo.repository.MemberMongoRepository;
-import com.goodmanltd.message.dao.mongo.repository.MessageMongoRepository;
-import com.goodmanltd.message.dao.mongo.repository.PostMongoRepository;
+import com.goodmanltd.core.dao.mongo.entity.MemberMongoEntity;
+import com.goodmanltd.core.dao.mongo.entity.MessageMongoEntity;
+import com.goodmanltd.core.dao.mongo.entity.PostMongoEntity;
+import com.goodmanltd.core.dao.mongo.entity.mapper.MessageMongoMapper;
+import com.goodmanltd.core.dao.mongo.repository.MemberMongoRepository;
+import com.goodmanltd.core.dao.mongo.repository.MessageMongoRepository;
+import com.goodmanltd.core.dao.mongo.repository.PostMongoRepository;
 import com.goodmanltd.message.dto.CreateMessageRequest;
 import com.goodmanltd.message.dto.GetConversationRequest;
 import com.goodmanltd.message.dto.GetConversationResponse;
+import com.goodmanltd.message.dto.GetParticipantListByPost;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.annotation.Profile;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Profile("mongo")
 @Service
 public class MessageServiceMongoImpl implements MessageService{
 
+	private final MongoTemplate mongoTemplate;
 	private final MemberMongoRepository memberRepository;
 	private final PostMongoRepository postRepository;
 	private final MessageMongoRepository messageRepository;
@@ -40,7 +46,8 @@ public class MessageServiceMongoImpl implements MessageService{
 
 	private final Logger LOGGER = LoggerFactory.getLogger(this.getClass());
 
-	public MessageServiceMongoImpl(MemberMongoRepository memberRepository, PostMongoRepository postRepository, MessageMongoRepository messageRepository, KafkaTemplate<String, Object> kafkaTemplate) {
+	public MessageServiceMongoImpl(MongoTemplate mongoTemplate, MemberMongoRepository memberRepository, PostMongoRepository postRepository, MessageMongoRepository messageRepository, KafkaTemplate<String, Object> kafkaTemplate) {
+		this.mongoTemplate = mongoTemplate;
 		this.memberRepository = memberRepository;
 		this.postRepository = postRepository;
 		this.messageRepository = messageRepository;
@@ -86,11 +93,16 @@ public class MessageServiceMongoImpl implements MessageService{
 		MessageMongoEntity newEntity = new MessageMongoEntity();
 		BeanUtils.copyProperties(request, newEntity);
 		newEntity.setId(UUID.randomUUID());
-		newEntity.setParticipantName(
-				request.getParticipantId() == request.getSenderId()?
-				existingSender.get().getName() :
-				existingReceiver.get().getName()
-				);
+		MemberReference senderRef = MemberMongoMapper.toMemberRef(existingSender.get());
+		MemberReference receiverRef = MemberMongoMapper.toMemberRef(existingReceiver.get());
+
+		newEntity.setSender(senderRef);
+		newEntity.setReceiver(receiverRef);
+		newEntity.setParticipant(
+				request.getParticipantId() == existingSender.get().getId()?
+						senderRef:
+						receiverRef
+		);
 		newEntity.setSentAt(LocalDateTime.now());
 
 		MessageMongoEntity saved = messageRepository.save(newEntity);
@@ -144,6 +156,76 @@ public class MessageServiceMongoImpl implements MessageService{
 		UUID newNextMsgId = endIndex < allMessages.size() ? allMessages.get(endIndex).getId() : null;
 
 		return new GetConversationResponse(messages, request.getPage(), newNextMsgId);
+	}
+
+	@Override
+	public GetParticipantListByPost getParticipantListByPost(UUID postId, String requestAuth0Id) {
+
+		// check post existence
+		Optional<PostMongoEntity> existingPost = postRepository.findById(postId);
+		if (existingPost.isEmpty()) {
+			LOGGER.error("post not found: " + postId);
+			throw new EntityNotFoundException(postId, "Post");
+		}
+		// check authorization
+		if (!Objects.equals(existingPost.get().getPostBy().getAuth0Id(), requestAuth0Id)){
+			LOGGER.error("Not Authorized to view : " +postId);
+			throw new NotAuthorizedException();
+		}
+
+		List<UUID> participantIds = mongoTemplate.query(MessageMongoEntity.class)
+				.distinct("participant.id")
+				.matching(Query.query(Criteria.where("postId").is(postId)))
+				.as(UUID.class)
+				.all();
+
+		// Optional optimization: fetch all members in one query
+		List<MemberMongoEntity> members = memberRepository.findAllById(participantIds);
+
+		List<MemberReference> participantRefs = members.stream()
+				.map(MemberMongoMapper::toMemberRef)
+				.toList();
+
+		return new GetParticipantListByPost(postId, participantRefs);
+	}
+
+	@Override
+	public List<GetParticipantListByPost> getParticipantListByAuth0Id(String requestAuth0Id) {
+		List<UUID> postIds = mongoTemplate.query(MessageMongoEntity.class)
+				.distinct("postId")
+				.matching(Query.query(
+						new Criteria().orOperator(
+								Criteria.where("sender.auth0Id").is(requestAuth0Id),
+								Criteria.where("receiver.auth0Id").is(requestAuth0Id)
+						)
+				))
+				.as(UUID.class)
+				.all();
+
+		return postIds.stream()
+				.map(postId -> {
+					// Get participant IDs for this post
+					List<UUID> participantIds = mongoTemplate.query(MessageMongoEntity.class)
+							.distinct("participant.id")
+							.matching(Query.query(Criteria.where("postId").is(postId)))
+							.as(UUID.class)
+							.all();
+
+					// Fetch member entities
+					List<MemberMongoEntity> members = memberRepository.findAllById(participantIds);
+
+					// Map to references
+					List<MemberReference> participantRefs = members.stream()
+							.map(MemberMongoMapper::toMemberRef)
+							.collect(Collectors.toList());
+
+					// Build response element
+					GetParticipantListByPost elem = new GetParticipantListByPost();
+					elem.setPostId(postId);
+					elem.setParticipants(participantRefs);
+					return elem;
+				})
+				.collect(Collectors.toList());
 	}
 
 	@Override

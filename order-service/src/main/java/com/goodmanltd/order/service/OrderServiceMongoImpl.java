@@ -1,24 +1,25 @@
 package com.goodmanltd.order.service;
 
+import com.goodmanltd.core.dao.mongo.entity.mapper.MemberMongoMapper;
+import com.goodmanltd.core.dao.mongo.entity.mapper.PostMongoMapper;
+import com.goodmanltd.core.dto.events.OrderCancelledEvent;
+import com.goodmanltd.core.exceptions.*;
 import com.goodmanltd.core.types.Order;
 import com.goodmanltd.core.dto.events.OrderCompletedEvent;
 import com.goodmanltd.core.dto.events.OrderCreatedEvent;
-import com.goodmanltd.core.exceptions.EntityNotFoundException;
-import com.goodmanltd.core.exceptions.MemberNotVerifiedException;
-import com.goodmanltd.core.exceptions.PostReservedException;
-import com.goodmanltd.core.exceptions.ReservedLimitReachException;
 import com.goodmanltd.core.kafka.KafkaTopics;
 import com.goodmanltd.core.types.MemberStatus;
 import com.goodmanltd.core.types.OrderStatus;
 import com.goodmanltd.core.types.PostStatus;
-import com.goodmanltd.order.dao.mongo.entity.MemberMongoEntity;
-import com.goodmanltd.order.dao.mongo.entity.OrderMongoEntity;
-import com.goodmanltd.order.dao.mongo.entity.PostMongoEntity;
-import com.goodmanltd.order.dao.mongo.entity.mapper.OrderMongoMapper;
-import com.goodmanltd.order.dao.mongo.repository.BookMongoRepository;
-import com.goodmanltd.order.dao.mongo.repository.MemberMongoRepository;
-import com.goodmanltd.order.dao.mongo.repository.OrderMongoRepository;
-import com.goodmanltd.order.dao.mongo.repository.PostMongoRepository;
+import com.goodmanltd.core.dao.mongo.entity.MemberMongoEntity;
+import com.goodmanltd.core.dao.mongo.entity.OrderMongoEntity;
+import com.goodmanltd.core.dao.mongo.entity.PostMongoEntity;
+import com.goodmanltd.core.dao.mongo.entity.mapper.OrderMongoMapper;
+import com.goodmanltd.core.dao.mongo.repository.BookMongoRepository;
+import com.goodmanltd.core.dao.mongo.repository.MemberMongoRepository;
+import com.goodmanltd.core.dao.mongo.repository.OrderMongoRepository;
+import com.goodmanltd.core.dao.mongo.repository.PostMongoRepository;
+import com.goodmanltd.order.dto.CancelOrderRequest;
 import com.goodmanltd.order.dto.CompleteOrderRequest;
 import com.goodmanltd.order.dto.CreateOrderRequest;
 import org.slf4j.Logger;
@@ -31,6 +32,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -84,15 +86,16 @@ public class OrderServiceMongoImpl implements OrderService {
 		}
 
 		// check reservation limit
-		if (existingMemberEntity.get().getReservedCount().intValue() >= 5) {
+		if (existingMemberEntity.get().getReservationCnt().intValue() >= 5
+		|| existingMemberEntity.get().getAnnualTotalReservations().intValue() >= 30) {
 			LOGGER.error("Reservation Limit Reached: " + request.getMemberId());
 			throw new ReservedLimitReachException(request.getMemberId());
 		}
 
 		OrderMongoEntity orderEntity = new OrderMongoEntity();
 		orderEntity.setId(UUID.randomUUID());
-		orderEntity.setMemberId(request.getMemberId());
-		orderEntity.setPostId(request.getPostId());
+		orderEntity.setOrderBy(MemberMongoMapper.toMemberRef(existingMemberEntity.get()));
+		orderEntity.setPostRef(PostMongoMapper.toPostRef(existingPost.get()));
 		orderEntity.setCreatedAt(LocalDateTime.now());
 		orderEntity.setOrderStatus(OrderStatus.CREATED);
 
@@ -100,14 +103,10 @@ public class OrderServiceMongoImpl implements OrderService {
 
 		// kafka
 		// order-created-event
-		OrderCreatedEvent createNewOrder = new OrderCreatedEvent(
-				saved.getId(),
-				saved.getPostId(),
-				saved.getMemberId(),
-				saved.getCreatedAt()
-		);
+		OrderCreatedEvent orderCreatedEvent = new OrderCreatedEvent();
+		BeanUtils.copyProperties(saved, orderCreatedEvent);
 
-		kafkaTemplate.send(KafkaTopics.ORDER_CREATED, createNewOrder);
+		kafkaTemplate.send(KafkaTopics.ORDER_CREATED, orderCreatedEvent);
 
 		LOGGER.info("*** new order id" + saved.getId());
 
@@ -115,12 +114,18 @@ public class OrderServiceMongoImpl implements OrderService {
 	}
 
 	@Override
-	public Order completeOrder(CompleteOrderRequest request) {
+	public Order completeOrder(CompleteOrderRequest request, String auth0Id) {
 		// check for order existence
 		Optional<OrderMongoEntity> existingOrderEntity = orderRepository.findById(request.getOrderId());
 		if (existingOrderEntity.isEmpty()) {
 			LOGGER.error("Order not found: " + request.getOrderId());
 			throw new EntityNotFoundException(request.getOrderId(), "Order");
+		}
+
+		if (!Objects.equals(existingOrderEntity.get().getOrderBy().getAuth0Id(), auth0Id) ||
+				!Objects.equals(existingOrderEntity.get().getPostRef().getPostBy().getAuth0Id(), auth0Id)) {
+			LOGGER.error("Not Authorized: " + request.getOrderId());
+			throw new NotAuthorizedException();
 		}
 
 		// save to db
@@ -132,16 +137,44 @@ public class OrderServiceMongoImpl implements OrderService {
 
 		// kafka
 		// order-completed-event
-		OrderCompletedEvent orderCompletedEvent = new OrderCompletedEvent(
-				saved.getId(),
-				saved.getPostId(),
-				saved.getMemberId(),
-				saved.getOrderStatus(),
-				saved.getCompletedAt()
-		);
+		OrderCompletedEvent orderCompletedEvent = new OrderCompletedEvent();
+		BeanUtils.copyProperties(saved, orderCompletedEvent);
 		kafkaTemplate.send(KafkaTopics.ORDER_COMPLETED, orderCompletedEvent);
 
 		LOGGER.info("*** order id marked completed" + saved.getId());
+
+		return OrderMongoMapper.toOrder(saved);
+	}
+
+	@Override
+	public Order cancelOrder(CancelOrderRequest request, String auth0Id) {
+		// check for order existence
+		Optional<OrderMongoEntity> existingOrderEntity = orderRepository.findById(request.getOrderId());
+		if (existingOrderEntity.isEmpty()) {
+			LOGGER.error("Order not found: " + request.getOrderId());
+			throw new EntityNotFoundException(request.getOrderId(), "Order");
+		}
+
+		if (!Objects.equals(existingOrderEntity.get().getOrderBy().getAuth0Id(), auth0Id) ||
+				!Objects.equals(existingOrderEntity.get().getPostRef().getPostBy().getAuth0Id(), auth0Id)) {
+			LOGGER.error("Not Authorized: " + request.getOrderId());
+			throw new NotAuthorizedException();
+		}
+
+		// save to db
+		OrderMongoEntity updatedEntity = new OrderMongoEntity();
+		BeanUtils.copyProperties(existingOrderEntity.get(), updatedEntity);
+		updatedEntity.setOrderStatus(OrderStatus.CANCELED);
+		updatedEntity.setCompletedAt(LocalDateTime.now());
+		OrderMongoEntity saved = orderRepository.save(updatedEntity);
+
+		// kafka
+		// order-completed-event
+		OrderCancelledEvent orderCancelledEvent = new OrderCancelledEvent();
+		BeanUtils.copyProperties(saved, orderCancelledEvent);
+		kafkaTemplate.send(KafkaTopics.ORDER_CANCELLED, orderCancelledEvent);
+
+		LOGGER.info("*** order id marked cancelled" + saved.getId());
 
 		return OrderMongoMapper.toOrder(saved);
 	}
@@ -154,7 +187,7 @@ public class OrderServiceMongoImpl implements OrderService {
 
 	@Override
 	public Optional<List<Order>> findByPostId(UUID postId) {
-		List<OrderMongoEntity> entities = orderRepository.findByPostId(postId);
+		List<OrderMongoEntity> entities = orderRepository.findByPostRef_Id(postId);
 		List<Order> dtoList = entities.stream().map(OrderMongoMapper::toOrder).toList();
 
 		return dtoList.isEmpty() ? Optional.empty() : Optional.of(dtoList);
@@ -162,7 +195,7 @@ public class OrderServiceMongoImpl implements OrderService {
 
 	@Override
 	public Optional<List<Order>> findByMemberId(UUID memberId) {
-		List<OrderMongoEntity> entities = orderRepository.findByMemberId(memberId);
+		List<OrderMongoEntity> entities = orderRepository.findByPostRef_Postby_Id(memberId);
 		List<Order> dtoList = entities.stream().map(OrderMongoMapper::toOrder).toList();
 
 		return dtoList.isEmpty() ? Optional.empty() : Optional.of(dtoList);

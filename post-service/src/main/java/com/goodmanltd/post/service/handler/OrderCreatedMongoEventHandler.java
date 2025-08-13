@@ -1,18 +1,14 @@
 package com.goodmanltd.post.service.handler;
 
-import com.goodmanltd.core.dto.events.BookCreatedEvent;
+import com.goodmanltd.core.dao.mongo.entity.PostMongoEntity;
+import com.goodmanltd.core.dao.mongo.repository.PostMongoRepository;
 import com.goodmanltd.core.dto.events.OrderCreatedEvent;
 import com.goodmanltd.core.dto.events.PostReservedEvent;
-import com.goodmanltd.core.dto.events.PostUpdatedEvent;
 import com.goodmanltd.core.exceptions.NotRetryableException;
 import com.goodmanltd.core.exceptions.RetryableException;
 import com.goodmanltd.core.kafka.KafkaTopics;
-import com.goodmanltd.core.types.OrderStatus;
+import com.goodmanltd.core.types.OrderReference;
 import com.goodmanltd.core.types.PostStatus;
-import com.goodmanltd.post.dao.mongo.entity.MemberMongoEntity;
-import com.goodmanltd.post.dao.mongo.entity.PostMongoEntity;
-import com.goodmanltd.post.dao.mongo.repository.MemberMongoRepository;
-import com.goodmanltd.post.dao.mongo.repository.PostMongoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -37,29 +33,24 @@ public class OrderCreatedMongoEventHandler {
 
 	private final KafkaTemplate<String, Object> kafkaTemplate;
 	private final PostMongoRepository postRepository;
-	private final MemberMongoRepository memberRepo;
 
-	public OrderCreatedMongoEventHandler(KafkaTemplate<String, Object> kafkaTemplate, PostMongoRepository postRepository, MemberMongoRepository memberRepo) {
+	public OrderCreatedMongoEventHandler(KafkaTemplate<String, Object> kafkaTemplate, PostMongoRepository postRepository) {
 		this.kafkaTemplate = kafkaTemplate;
 		this.postRepository = postRepository;
-		this.memberRepo = memberRepo;
 	}
 
 	@Transactional
 	@KafkaHandler
 	public void handle(@Payload OrderCreatedEvent orderCreatedEvent) {
-		LOGGER.info("Post service receive new order created event: " + orderCreatedEvent.getOrderId());
+		LOGGER.info("Post service receive new order created event: " + orderCreatedEvent.getId());
 
 		// check if post exist
-		Optional<PostMongoEntity> existingRecord = postRepository.findById(orderCreatedEvent.getPostId());
+		Optional<PostMongoEntity> existingPost = postRepository.findById(orderCreatedEvent.getPostRef().getId());
 
-		if (existingRecord.isEmpty()) {
-			LOGGER.error("Post {} not found", orderCreatedEvent.getPostId());
-			throw new RetryableException("Post " + orderCreatedEvent.getPostId() + " not found");
+		if (existingPost.isEmpty()) {
+			LOGGER.error("Post {} not found", orderCreatedEvent.getPostRef().getId());
+			throw new RetryableException("Post " + orderCreatedEvent.getPostRef().getId() + " not found");
 		}
-
-		// member name lookup
-		Optional<MemberMongoEntity> member = memberRepo.findById(orderCreatedEvent.getMemberId());
 
 
 		// to-do
@@ -67,16 +58,17 @@ public class OrderCreatedMongoEventHandler {
 
 		// update entity using info from order created event
 		PostMongoEntity updatedEntity = new PostMongoEntity();
-		BeanUtils.copyProperties(existingRecord.get(), updatedEntity);
 
-		updatedEntity.setId(existingRecord.get().getId());
-		updatedEntity.setOrderId(orderCreatedEvent.getOrderId());
-		updatedEntity.setReservedBy(orderCreatedEvent.getMemberId());
-		updatedEntity.setReservedName(member.isPresent()? member.get().getName() : "");
+		BeanUtils.copyProperties(existingPost.get(), updatedEntity);
+		updatedEntity.setId(existingPost.get().getId());
+
+		OrderReference orderReference = new OrderReference(
+				orderCreatedEvent.getId(),
+				orderCreatedEvent.getOrderBy()
+		);
+		updatedEntity.setOrderRef(orderReference);
+
 		updatedEntity.setPostStatus(PostStatus.RESERVED);
-		// simplifier operation, directly set order status to pending
-		updatedEntity.setOrderStatus(OrderStatus.PENDING);
-
 
 		try {
 
@@ -86,7 +78,6 @@ public class OrderCreatedMongoEventHandler {
 			// issue ->  post-reserved-event-topic
 			PostReservedEvent postReservedEvent = new PostReservedEvent();
 			BeanUtils.copyProperties(saved, postReservedEvent);
-			postReservedEvent.setOrderStatus(OrderStatus.PENDING);
 
 			kafkaTemplate.send(KafkaTopics.POST_RESERVED, postReservedEvent);
 			LOGGER.info("Post service issues Post Reserved event: " + postReservedEvent.getId());
@@ -99,8 +90,6 @@ public class OrderCreatedMongoEventHandler {
 			LOGGER.error(ex.getMessage());
 			throw new NotRetryableException(ex);
 		}
-
-
 
 
 	}

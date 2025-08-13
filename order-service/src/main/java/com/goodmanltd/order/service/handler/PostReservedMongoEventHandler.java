@@ -6,10 +6,10 @@ import com.goodmanltd.core.exceptions.NotRetryableException;
 import com.goodmanltd.core.exceptions.RetryableException;
 import com.goodmanltd.core.kafka.KafkaTopics;
 import com.goodmanltd.core.types.OrderStatus;
-import com.goodmanltd.order.dao.mongo.entity.OrderMongoEntity;
-import com.goodmanltd.order.dao.mongo.entity.PostMongoEntity;
-import com.goodmanltd.order.dao.mongo.repository.OrderMongoRepository;
-import com.goodmanltd.order.dao.mongo.repository.PostMongoRepository;
+import com.goodmanltd.core.dao.mongo.entity.OrderMongoEntity;
+import com.goodmanltd.core.dao.mongo.entity.PostMongoEntity;
+import com.goodmanltd.core.dao.mongo.repository.OrderMongoRepository;
+import com.goodmanltd.core.dao.mongo.repository.PostMongoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -64,10 +64,11 @@ public class PostReservedMongoEventHandler {
 
 
 		// update order status to "Pending"
-		Optional<OrderMongoEntity> existingOrder = orderRepository.findById(postReservedEvent.getOrderId());
+		Optional<OrderMongoEntity> existingOrder = orderRepository.findById(
+				postReservedEvent.getOrderRef().getId());
 		if (existingOrder.isEmpty()) {
-			LOGGER.error("Order {} not found ", postReservedEvent.getOrderId());
-			throw new RetryableException("Order "+ postReservedEvent.getOrderId() + " not found");
+			LOGGER.error("Order {} not found ", postReservedEvent.getOrderRef().getId());
+			throw new RetryableException("Order "+ postReservedEvent.getOrderRef().getId() + " not found");
 		}
 
 		OrderMongoEntity orderEntity = new OrderMongoEntity();
@@ -93,12 +94,8 @@ public class PostReservedMongoEventHandler {
 
 		// kafka
 		// order-pending-event
-		OrderPendingEvent orderPendingEvent = new OrderPendingEvent(
-				orderEntity.getId(),
-				orderEntity.getPostId(),
-				orderEntity.getMemberId(),
-				orderEntity.getOrderStatus()
-		);
+		OrderPendingEvent orderPendingEvent = new OrderPendingEvent();
+		BeanUtils.copyProperties(orderEntity, orderPendingEvent);
 		kafkaTemplate.send(KafkaTopics.ORDER_PENDING, orderPendingEvent);
 		LOGGER.info("Order service issues Order pending event: " + orderPendingEvent.getId());
 

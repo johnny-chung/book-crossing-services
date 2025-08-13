@@ -1,5 +1,7 @@
 package com.goodmanltd.core.dto.events;
 
+import com.goodmanltd.core.types.MemberReference;
+import com.goodmanltd.core.types.OrderReference;
 import com.goodmanltd.core.types.OrderStatus;
 import com.goodmanltd.core.types.PostStatus;
 import lombok.AllArgsConstructor;
@@ -12,8 +14,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class PostReservedEvent {
 	private UUID id;
-	private UUID reservedBy;
-	private UUID orderId;
-	private OrderStatus orderStatus;
+	private MemberReference postBy;
+	private OrderReference orderRef;
 	private PostStatus postStatus;
 }

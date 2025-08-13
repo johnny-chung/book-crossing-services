@@ -11,8 +11,8 @@ import java.util.UUID;
 public class Message {
 	private UUID id;
 	private UUID postId;
-	private UUID participantId;
 
+	private MemberReference participant;
 	private MemberReference sender;
 	private MemberReference receiver;
 

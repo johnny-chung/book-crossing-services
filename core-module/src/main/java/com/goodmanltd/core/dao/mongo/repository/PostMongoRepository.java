@@ -19,6 +19,6 @@ public interface PostMongoRepository extends MongoRepository<PostMongoEntity, UU
 
 	List<PostMongoEntity> findByPostBy_Auth0Id(String auth0Id);
 
-	List<PostMongoEntity> findByOrderRef_OrderBy_Id(UUID id);
+	List<PostMongoEntity> findByOrderRef_Id(UUID orderId);
 	List<PostMongoEntity> findByOrderRef_OrderBy_Auth0Id(String auth0Id);
 }

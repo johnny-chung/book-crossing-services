@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -49,5 +50,10 @@ public class MemberController {
 	public List<Member> getAll(){
 		return memberService.getAll()
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Members not found"));
+	}
+
+	@GetMapping("/health")
+	public ResponseEntity<String> healthCheck() {
+		return ResponseEntity.ok("Member Service is healthy");
 	}
 }

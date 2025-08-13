@@ -15,7 +15,7 @@ import java.util.UUID;
 
 @Profile("mongo")
 @Document("messages")
-@CompoundIndex(name = "post_participant_idx", def = "{'postId': 1, 'participantId': 1}")
+@CompoundIndex(name = "post_participant_idx_v2", def = "{'postId': 1, 'participant.id': 1}")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -24,8 +24,8 @@ public class MessageMongoEntity {
 	@Id
 	private UUID id;
 	private UUID postId;
-	private UUID participantId;
 
+	private MemberReference participant;
 	private MemberReference sender;
 	private MemberReference receiver;
 

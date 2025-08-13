@@ -1,8 +1,6 @@
 package com.goodmanltd.post.dto;
 
-import com.goodmanltd.core.types.Book;
-import com.goodmanltd.core.types.OrderStatus;
-import com.goodmanltd.core.types.PostStatus;
+import com.goodmanltd.core.types.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -16,17 +14,15 @@ import java.util.UUID;
 public class GetPostDetailsResponse{
 
 	private UUID id;
-	private UUID postBy;
-	private UUID bookId;
-	private String bookTitle;
-	private String thumbnail;
+	private MemberReference postBy;
+	private BookReference bookRef;
+
 	private String location;
 	private String remarks;
 	private LocalDateTime createdAt;
-	private UUID reservedBy;
-	private String reservedName;
-	private UUID orderId;
-	private OrderStatus orderStatus;
+
+	private OrderReference orderRef;
+
 	private PostStatus postStatus;
 
 	private Book bookDetails;

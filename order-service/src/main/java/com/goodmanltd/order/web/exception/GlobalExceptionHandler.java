@@ -1,6 +1,7 @@
 package com.goodmanltd.order.web.exception;
 
 import com.goodmanltd.core.exceptions.EntityNotFoundException;
+import com.goodmanltd.core.exceptions.NotAuthorizedException;
 import com.goodmanltd.core.exceptions.PostReservedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +29,14 @@ public class GlobalExceptionHandler {
 		error.put("error", "Book reserved");
 		error.put("postId", String.valueOf(ex.getPostId()));
 		return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+	}
+
+	@ExceptionHandler(NotAuthorizedException.class)
+	public ResponseEntity<Map<String, String>> handleNotAuthorized(NotAuthorizedException ex) {
+		Map<String, String> error = new HashMap<>();
+		error.put("error", "Not authorized");
+		error.put("reason", ex.getMessage()); // Optional: include a custom message from the exception
+		return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error); // 403 Forbidden
 	}
 
 }

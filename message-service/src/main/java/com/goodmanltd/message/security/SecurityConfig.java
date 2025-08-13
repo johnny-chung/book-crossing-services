@@ -29,8 +29,9 @@ public class SecurityConfig {
 		http
 				.csrf(csrf -> csrf.disable())
 				.authorizeHttpRequests(auth -> auth
-
-				.anyRequest().permitAll()
+					.requestMatchers("/conversation-list/**").authenticated()
+					.requestMatchers("/member/conversation-list").authenticated()
+					.anyRequest().permitAll()
 		)
 				.oauth2ResourceServer(resourceServer ->
 						resourceServer.jwt(jwt ->

@@ -16,7 +16,10 @@ public interface OrderMongoRepository extends
 
 		Optional<OrderMongoEntity> findById(UUID orderId);
 
+		List<OrderMongoEntity> findByPostRef_Id(UUID postId);
+
 		List<OrderMongoEntity> findByPostRef_Postby_Id(UUID postById);
+
 		List<OrderMongoEntity> findByOrderBy_Id(UUID orderById);
 
 		List<OrderMongoEntity> findByPostRef_Postby_Auth0Id(UUID postById);

@@ -1,5 +1,6 @@
 package com.goodmanltd.message.dto;
 
+import com.goodmanltd.core.types.MemberReference;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,11 +13,12 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CreateMessageResponse {
 	private UUID id;
-	private UUID senderId;
-	private UUID receiverId;
 	private UUID postId;
-	private UUID participantId;
-	private String participantName;
+
+	private MemberReference participant;
+	private MemberReference sender;
+	private MemberReference receiver;
+
 	private LocalDateTime sentAt;
 	private String content;
 }

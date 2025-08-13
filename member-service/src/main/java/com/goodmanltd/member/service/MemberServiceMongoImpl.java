@@ -4,9 +4,9 @@ import com.goodmanltd.core.types.Member;
 import com.goodmanltd.core.dto.events.MemberCreatedEvent;
 import com.goodmanltd.core.kafka.KafkaTopics;
 import com.goodmanltd.core.types.MemberStatus;
-import com.goodmanltd.member.dao.mongo.entity.MemberMongoEntity;
-import com.goodmanltd.member.dao.mongo.entity.mapper.MemberMongoMapper;
-import com.goodmanltd.member.dao.mongo.repository.MemberMongoRepository;
+import com.goodmanltd.core.dao.mongo.entity.MemberMongoEntity;
+import com.goodmanltd.core.dao.mongo.entity.mapper.MemberMongoMapper;
+import com.goodmanltd.core.dao.mongo.repository.MemberMongoRepository;
 import com.goodmanltd.member.dto.CreateMemberRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +50,8 @@ public class MemberServiceMongoImpl implements MemberService{
 		BeanUtils.copyProperties(request, newMemberEntity);
 		newMemberEntity.setId(UUID.randomUUID());
 		newMemberEntity.setCreatedAt(LocalDateTime.now());
-		newMemberEntity.setReservedCount(0);
+		newMemberEntity.setReservationCnt(0);
+		newMemberEntity.setAnnualTotalReservations(0);
 		newMemberEntity.setStatus(MemberStatus.PENDING);
 
 		MemberMongoEntity saved = memberRepository.save(newMemberEntity);

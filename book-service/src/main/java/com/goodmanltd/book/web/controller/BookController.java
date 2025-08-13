@@ -8,6 +8,7 @@ import com.goodmanltd.book.service.BookService;
 import jakarta.validation.Valid;
 import org.springframework.beans.BeanUtils;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -51,6 +52,11 @@ public class BookController {
 	public List<Book> getAll(){
 		return bookService.findAll()
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Books not found"));
+	}
+
+	@GetMapping("/health")
+	public ResponseEntity<String> healthCheck() {
+		return ResponseEntity.ok("Book Service is healthy");
 	}
 
 }

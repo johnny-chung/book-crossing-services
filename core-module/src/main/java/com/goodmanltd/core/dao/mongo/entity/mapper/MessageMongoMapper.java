@@ -12,6 +12,7 @@ public class MessageMongoMapper {
 		Message message = new Message();
 
 		BeanUtils.copyProperties(entity, message);
+		message.setParticipant(MemberReference.from(entity.getParticipant()));
 		message.setSender(MemberReference.from(entity.getSender()));
 		message.setReceiver(MemberReference.from(entity.getReceiver()));
 		
@@ -24,6 +25,7 @@ public class MessageMongoMapper {
 
 		BeanUtils.copyProperties(dto, entity);
 		entity.setSender(MemberReference.from(dto.getSender()));
+		entity.setParticipant(MemberReference.from(dto.getParticipant()));
 		entity.setReceiver(MemberReference.from(dto.getReceiver()));
 
 		return entity;

@@ -56,7 +56,7 @@ public class KafkaConfig {
 
 	@Bean
 	NewTopic createOrderEventsTopic() {
-		return TopicBuilder.name(orderCreatedTopic)
+		return TopicBuilder.name(KafkaTopics.ORDER_CREATED)
 				.partitions(TOPIC_PARTITIONS)
 				.replicas(TOPIC_REPLICATION_FACTOR)
 				.build();

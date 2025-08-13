@@ -19,7 +19,7 @@ public interface MessageMongoRepository extends MongoRepository<MessageMongoEnti
 	List<MessageMongoEntity> findByReceiver_Id(UUID receiverId);
 	List<MessageMongoEntity> findByReceiver_Auth0Id(String receiverAuth0Id);
 
-	@Query(value = "{ 'postId': ?0, 'participantId': ?1 }", sort = "{ 'sentAt': -1 }")
+	@Query(value = "{ 'postId': ?0, 'participant.id': ?1 }", sort = "{ 'sentAt': -1 }")
 	List<MessageMongoEntity> findByPostIdAndParticipantId(UUID postId, UUID participantId);
 	List<MessageMongoEntity> findByPostId(UUID postId);
 

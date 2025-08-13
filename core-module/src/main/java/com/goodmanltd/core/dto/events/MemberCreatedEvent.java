@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
@@ -15,6 +16,9 @@ public class MemberCreatedEvent {
 	private String auth0Id;
 	private String name;
 	private String email;
+	private Number rating;
+	private LocalDateTime createdAt;
+	private Number reservationCnt;
+	private Number annualTotalReservations;
 	private MemberStatus status;
-	private Number reservedCount;
 }
