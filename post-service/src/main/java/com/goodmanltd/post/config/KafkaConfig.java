@@ -76,6 +76,13 @@ public class KafkaConfig {
 				.build();
 	}
 	@Bean
+	NewTopic completePostEventsTopic() {
+		return TopicBuilder.name(KafkaTopics.POST_COMPLETED)
+				.partitions(TOPIC_PARTITIONS)
+				.replicas(TOPIC_REPLICATION_FACTOR)
+				.build();
+	}
+	@Bean
 	NewTopic createBookCommentsTopic() {
 		return TopicBuilder.name(KafkaTopics.CREATE_BOOK_COMMAND)
 				.partitions(TOPIC_PARTITIONS)

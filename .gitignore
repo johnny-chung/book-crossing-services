@@ -46,3 +46,4 @@ bin/
 
 application-local.yml
 
+secret.yml

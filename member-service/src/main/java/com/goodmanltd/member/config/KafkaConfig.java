@@ -59,5 +59,12 @@ public class KafkaConfig {
 				.replicas(TOPIC_REPLICATION_FACTOR)
 				.build();
 	}
+	@Bean
+	NewTopic updateMemberEventsTopic() {
+		return TopicBuilder.name(KafkaTopics.MEMBER_UPDATED)
+				.partitions(TOPIC_PARTITIONS)
+				.replicas(TOPIC_REPLICATION_FACTOR)
+				.build();
+	}
 
 }

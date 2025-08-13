@@ -75,6 +75,13 @@ public class KafkaConfig {
 				.replicas(TOPIC_REPLICATION_FACTOR)
 				.build();
 	}
+	@Bean
+	NewTopic cancelOrderEventsTopic() {
+		return TopicBuilder.name(KafkaTopics.ORDER_CANCELLED)
+				.partitions(TOPIC_PARTITIONS)
+				.replicas(TOPIC_REPLICATION_FACTOR)
+				.build();
+	}
 
 
 }

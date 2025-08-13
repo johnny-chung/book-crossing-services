@@ -195,7 +195,7 @@ public class OrderServiceMongoImpl implements OrderService {
 
 	@Override
 	public Optional<List<Order>> findByMemberId(UUID memberId) {
-		List<OrderMongoEntity> entities = orderRepository.findByPostRef_Postby_Id(memberId);
+		List<OrderMongoEntity> entities = orderRepository.findByPostRef_PostBy_Id(memberId);
 		List<Order> dtoList = entities.stream().map(OrderMongoMapper::toOrder).toList();
 
 		return dtoList.isEmpty() ? Optional.empty() : Optional.of(dtoList);
