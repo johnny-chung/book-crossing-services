@@ -1,16 +1,25 @@
 package com.goodmanltd.book.service;
 
+import com.goodmanltd.book.dao.mongo.entity.CategoryMongoEntity;
+import com.goodmanltd.book.dao.mongo.entity.LanguageMongoEntity;
+import com.goodmanltd.book.dao.mongo.entity.mapper.CategoryMongoMapper;
+import com.goodmanltd.book.dao.mongo.entity.mapper.LanguageMongoMapper;
+import com.goodmanltd.book.dao.mongo.repository.CategoriesMongoRepository;
+import com.goodmanltd.book.dao.mongo.repository.LanguagesMongoRepository;
+import com.goodmanltd.book.dto.CategoryDto;
+import com.goodmanltd.book.dto.CreateBookRequest;
 import com.goodmanltd.book.dto.GoogleBookVolRes;
-import com.goodmanltd.core.types.Book;
-import com.goodmanltd.core.dto.events.BookCreatedEvent;
+import com.goodmanltd.book.dto.LanguageDto;
 import com.goodmanltd.core.dao.mongo.entity.BookMongoEntity;
 import com.goodmanltd.core.dao.mongo.entity.mapper.BookMongoMapper;
 import com.goodmanltd.core.dao.mongo.repository.BookMongoRepository;
-import com.goodmanltd.book.dto.CreateBookRequest;
+import com.goodmanltd.core.dto.events.BookCreatedEvent;
 import com.goodmanltd.core.exceptions.ExternalBookNotFoundException;
 import com.goodmanltd.core.kafka.KafkaTopics;
+import com.goodmanltd.core.types.Book;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
 import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -24,13 +33,18 @@ import java.util.UUID;
 public class BookServiceMongoImpl implements BookService{
 
 	private final BookMongoRepository bookRepository;
+	private final LanguagesMongoRepository languageRepo;
+	private final CategoriesMongoRepository categoryRepo;
 	private final KafkaTemplate<String, Object> kafkaTemplate;
 	private final GoogleBooksClient googleBooksClient;
 
+
 	private final Logger LOGGER = LoggerFactory.getLogger(this.getClass());
 
-	public BookServiceMongoImpl(BookMongoRepository bookRepository, KafkaTemplate<String, Object> kafkaTemplate, GoogleBooksClient googleBooksClient) {
+	public BookServiceMongoImpl(BookMongoRepository bookRepository, LanguagesMongoRepository languageRepo, CategoriesMongoRepository categoryRepo, KafkaTemplate<String, Object> kafkaTemplate, GoogleBooksClient googleBooksClient) {
 		this.bookRepository = bookRepository;
+		this.languageRepo = languageRepo;
+		this.categoryRepo = categoryRepo;
 		this.kafkaTemplate = kafkaTemplate;
 		this.googleBooksClient = googleBooksClient;
 	}
@@ -96,6 +110,32 @@ public class BookServiceMongoImpl implements BookService{
 
 		LOGGER.info("*** new book id" + saved.getId());
 
+		// update language
+
+		Optional<LanguageMongoEntity> existingLanguage = languageRepo.findByLanguage(saved.getLanguage());
+		LanguageMongoEntity languageToSave = new LanguageMongoEntity();
+		if (existingLanguage.isPresent()) {
+			BeanUtils.copyProperties(existingLanguage.get(), languageToSave);
+			languageToSave.setCount(existingLanguage.get().getCount().intValue() + 1);
+		} else {
+			languageToSave.setLanguage(saved.getLanguage());
+			languageToSave.setCount(1);
+		}
+		languageRepo.save(languageToSave);
+
+		// update category
+		Optional<CategoryMongoEntity> existingCategory = categoryRepo.findByCategory(saved.getCategory());
+		CategoryMongoEntity categoryToSave = new CategoryMongoEntity();
+		if (existingCategory.isPresent()) {
+			BeanUtils.copyProperties(existingCategory.get(), categoryToSave);
+			categoryToSave.setCount(existingCategory.get().getCount().intValue() + 1);
+		} else {
+			categoryToSave.setCategory(saved.getCategory());
+			categoryToSave.setCount(1);
+		}
+		categoryRepo.save(categoryToSave);
+
+
 		// return
 		return new Book(
 				saved.getId(),
@@ -130,5 +170,18 @@ public class BookServiceMongoImpl implements BookService{
 		List<Book> dtoList = bookRepository.findAll().stream().map(BookMongoMapper::toBook).toList();
 
 		return dtoList.isEmpty() ? Optional.empty() : Optional.of(dtoList);
+	}
+
+	@Override
+	public List<LanguageDto> findLanguages() {
+		return languageRepo.findAllAvailableLanguages()
+				.stream().map(LanguageMongoMapper::toLanguageDto).toList();
+
+	}
+
+	@Override
+	public List<CategoryDto> findCategories() {
+		return categoryRepo.findAllAvailableCategories()
+				.stream().map(CategoryMongoMapper::toCategoryDto).toList();
 	}
 }

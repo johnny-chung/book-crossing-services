@@ -11,7 +11,7 @@ import java.util.UUID;
 public interface MemberService {
 	Member createMember(CreateMemberRequest request);
 
-	Optional<Member> getMemberDetails(UUID memberId);
+	Optional<Member> getMemberDetails(String auth0Id);
 
 	Optional<List<Member>> getAll();
 }

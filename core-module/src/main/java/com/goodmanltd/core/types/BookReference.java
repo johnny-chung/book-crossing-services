@@ -11,9 +11,17 @@ public class BookReference {
 	private UUID id;
 	private String title;
 	private String thumbnail;
+	private String category;
+	private String language;
 
 	public static BookReference from(BookReference other) {
 		if (other == null) return null;
-		return new BookReference(other.id, other.title, other.thumbnail);
+		return new BookReference(
+				other.id,
+				other.title,
+				other.thumbnail,
+				other.category,
+				other.language
+		);
 	}
 }

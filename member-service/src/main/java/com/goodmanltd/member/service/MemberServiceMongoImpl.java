@@ -1,5 +1,6 @@
 package com.goodmanltd.member.service;
 
+import com.goodmanltd.core.exceptions.NotAuthorizedException;
 import com.goodmanltd.core.types.Member;
 import com.goodmanltd.core.dto.events.MemberCreatedEvent;
 import com.goodmanltd.core.kafka.KafkaTopics;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -67,8 +69,10 @@ public class MemberServiceMongoImpl implements MemberService{
 	}
 
 	@Override
-	public Optional<Member> getMemberDetails(UUID memberId) {
-		return memberRepository.findById(memberId).map(MemberMongoMapper::toMember);
+	public Optional<Member> getMemberDetails(String auth0Id) {
+		return memberRepository.findByAuth0Id(auth0Id)
+				.map(MemberMongoMapper::toMember);
+
 	}
 
 	@Override

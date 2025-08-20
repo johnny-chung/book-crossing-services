@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: order-service
-          image: order-service:latest
+          image: goodmanisltd/bookcrossing-order-service:latest
           ports:
             - containerPort: 8083
           env:

@@ -1,0 +1,121 @@
+apiVersion: skaffold/v4beta13
+kind: Config
+
+manifests:
+  rawYaml:
+    - ./infra/k8s/*
+#    - ./infra/k8s/ingress-depl.yml
+#    - ./infra/k8s/message-service-depl.yml
+
+profiles:
+  - name: prod
+    build:
+      artifacts: []   # empty → no local build
+    deploy:
+      helm:
+        releases:
+          - name: kafka
+            remoteChart: kafka
+            repo: https://charts.bitnami.com/bitnami
+            setValues:
+              replicaCount: "1"
+              listeners:
+                client:
+                  protocol: plaintext
+                controllers:
+                  protocol: plaintext
+                interbroker:
+                  protocol: plaintext
+
+  - name: dockerhub
+    build:
+      local:
+        push: true
+      artifacts:
+        - image: goodmanisltd/bookcrossing-book-service
+          context: book-service
+          docker:
+            dockerfile: Dockerfile
+        - image: goodmanisltd/bookcrossing-post-service
+          context: post-service
+          docker:
+            dockerfile: Dockerfile
+        - image: goodmanisltd/bookcrossing-order-service
+          context: order-service
+          docker:
+            dockerfile: Dockerfile
+        - image: goodmanisltd/bookcrossing-member-service
+          context: member-service
+          docker:
+            dockerfile: Dockerfile
+        - image: goodmanisltd/bookcrossing-message-service
+          context: message-service
+          docker:
+            dockerfile: Dockerfile
+    deploy:
+      helm:
+        releases:
+          - name: kafka
+            remoteChart: kafka
+            repo: https://charts.bitnami.com/bitnami
+            setValues:
+              replicaCount: "3"
+              listeners:
+                client:
+                  protocol: plaintext
+                controllers:
+                  protocol: plaintext
+                interbroker:
+                  protocol: plaintext
+  - name: local
+    build:
+      local:
+        push: false
+      artifacts:
+        - image: goodmanisltd/bookcrossing-book-service
+          context: book-service
+          docker:
+            dockerfile: Dockerfile
+        - image: goodmanisltd/bookcrossing-post-service
+          context: post-service
+          docker:
+            dockerfile: Dockerfile
+        - image: goodmanisltd/bookcrossing-order-service
+          context: order-service
+          docker:
+            dockerfile: Dockerfile
+        - image: goodmanisltd/bookcrossing-member-service
+          context: member-service
+          docker:
+            dockerfile: Dockerfile
+        - image: goodmanisltd/bookcrossing-message-service
+          context: message-service
+          docker:
+            dockerfile: Dockerfile
+    deploy:
+      helm:
+        releases:
+          - name: kafka
+            remoteChart: kafka
+            repo: https://charts.bitnami.com/bitnami
+            setValues:
+              replicaCount: "3"
+              listeners:
+                client:
+                  protocol: plaintext
+                controllers:
+                  protocol: plaintext
+                interbroker:
+                  protocol: plaintext
+
+
+
+portForward:
+  - resourceType: service
+    resourceName: book-service-srv
+    port: 8081
+    localPort: 8081
+#  - resourceType: service
+#    resourceName: member-service-srv
+#    port: 8087
+#    localPort: 8087

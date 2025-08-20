@@ -1,11 +1,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: ingress-srv
-  annotations:
-    nginx.ingress.kubernetes.io/use-regex: "true"
+  name: bookcrossing-ingress
 spec:
-  ingressClassName: nginx
+  ingressClassName: traefik
   rules:
     - host: bookcrossing-api.goodmanltd.com
       http:

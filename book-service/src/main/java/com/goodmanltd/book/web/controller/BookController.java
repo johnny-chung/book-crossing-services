@@ -1,6 +1,8 @@
 package com.goodmanltd.book.web.controller;
 
 
+import com.goodmanltd.book.dto.CategoryDto;
+import com.goodmanltd.book.dto.LanguageDto;
 import com.goodmanltd.core.types.Book;
 import com.goodmanltd.book.dto.CreateBookRequest;
 import com.goodmanltd.book.dto.CreateBookResponse;
@@ -53,6 +55,17 @@ public class BookController {
 		return bookService.findAll()
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Books not found"));
 	}
+
+	@GetMapping("/languages")
+	public List<LanguageDto> getLanguages(){
+		return bookService.findLanguages();
+	}
+
+	@GetMapping("/categories")
+	public List<CategoryDto> getCategories(){
+		return bookService.findCategories();
+	}
+
 
 	@GetMapping("/health")
 	public ResponseEntity<String> healthCheck() {

@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: message-service
-          image: message-service:latest
+          image: goodmanisltd/bookcrossing-message-service:latest
           ports:
             - containerPort: 8089
           env:

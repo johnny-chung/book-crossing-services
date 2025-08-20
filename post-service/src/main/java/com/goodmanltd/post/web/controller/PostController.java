@@ -17,6 +17,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.data.domain.Sort;
 
 import java.util.List;
 import java.util.UUID;
@@ -32,6 +33,21 @@ public class PostController {
 	public PostController(PostService postService) {
 		this.postService = postService;
 	}
+
+	@GetMapping
+	public List<Post> getPosts(
+			@RequestParam(required = false) List<String> category,
+			@RequestParam(required = false) List<String> language,
+			@RequestParam(defaultValue = "desc") String order,
+			@RequestParam(required = false) String search
+	) {
+		Sort sort = order.equalsIgnoreCase("asc")
+				? Sort.by(Sort.Direction.ASC, "createdAt")
+				: Sort.by(Sort.Direction.DESC, "createdAt");
+
+		return postService.searchPosts(category, language, search, sort);
+	}
+
 
 	@PostMapping
 	@ResponseStatus(HttpStatus.ACCEPTED)

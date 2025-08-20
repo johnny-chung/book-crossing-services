@@ -1,37 +1,40 @@
 package com.goodmanltd.post.service;
 
+import com.goodmanltd.core.dao.mongo.entity.BookMongoEntity;
+import com.goodmanltd.core.dao.mongo.entity.MemberMongoEntity;
+import com.goodmanltd.core.dao.mongo.entity.PostMongoEntity;
+import com.goodmanltd.core.dao.mongo.entity.mapper.BookMongoMapper;
 import com.goodmanltd.core.dao.mongo.entity.mapper.MemberMongoMapper;
-import com.goodmanltd.core.exceptions.NotAuthorizedException;
-import com.goodmanltd.core.types.Book;
-import com.goodmanltd.core.types.Post;
+import com.goodmanltd.core.dao.mongo.entity.mapper.PostMongoMapper;
+import com.goodmanltd.core.dao.mongo.repository.BookMongoRepository;
+import com.goodmanltd.core.dao.mongo.repository.MemberMongoRepository;
+import com.goodmanltd.core.dao.mongo.repository.PostMongoRepository;
 import com.goodmanltd.core.dto.command.CreateBookCommand;
 import com.goodmanltd.core.dto.events.PostCreatedEvent;
 import com.goodmanltd.core.exceptions.EntityNotFoundException;
 import com.goodmanltd.core.kafka.KafkaTopics;
+import com.goodmanltd.core.types.Book;
+import com.goodmanltd.core.types.Post;
 import com.goodmanltd.core.types.PostStatus;
-import com.goodmanltd.core.dao.mongo.entity.BookMongoEntity;
-import com.goodmanltd.core.dao.mongo.entity.MemberMongoEntity;
 import com.goodmanltd.post.dao.mongo.entity.PendingPostMongoEntity;
-import com.goodmanltd.core.dao.mongo.entity.PostMongoEntity;
-import com.goodmanltd.core.dao.mongo.entity.mapper.BookMongoMapper;
 import com.goodmanltd.post.dao.mongo.entity.mapper.PendingPostMongoMapper;
-import com.goodmanltd.core.dao.mongo.entity.mapper.PostMongoMapper;
-import com.goodmanltd.core.dao.mongo.repository.BookMongoRepository;
-import com.goodmanltd.core.dao.mongo.repository.MemberMongoRepository;
 import com.goodmanltd.post.dao.mongo.repository.PendingPostMongoRepository;
-import com.goodmanltd.core.dao.mongo.repository.PostMongoRepository;
 import com.goodmanltd.post.dto.CreatePostRequest;
 import com.goodmanltd.post.dto.GetPostDetailsResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.annotation.Profile;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -44,6 +47,7 @@ public class PostServiceMongoImpl implements PostService{
 	private final PendingPostMongoRepository pendingPostRepo;
 	private final MemberMongoRepository memberRepo;
 	private final KafkaTemplate<String, Object> kafkaTemplate;
+	private final MongoTemplate mongoTemplate;
 
 
 	private final Logger LOGGER = LoggerFactory.getLogger(this.getClass());
@@ -51,12 +55,13 @@ public class PostServiceMongoImpl implements PostService{
 //	@Value("${app.kafka.topics.postCreated}")
 //	private String postCreatedTopic;
 
-	public PostServiceMongoImpl(BookMongoRepository bookRepository, PostMongoRepository postRepository, PendingPostMongoRepository pendingPostRepo, MemberMongoRepository memberRepo, KafkaTemplate<String, Object> kafkaTemplate) {
+	public PostServiceMongoImpl(BookMongoRepository bookRepository, PostMongoRepository postRepository, PendingPostMongoRepository pendingPostRepo, MemberMongoRepository memberRepo, KafkaTemplate<String, Object> kafkaTemplate, MongoTemplate mongoTemplate) {
 		this.bookRepository = bookRepository;
 		this.postRepository = postRepository;
 		this.pendingPostRepo = pendingPostRepo;
 		this.memberRepo = memberRepo;
 		this.kafkaTemplate = kafkaTemplate;
+		this.mongoTemplate = mongoTemplate;
 	}
 
 	@Override
@@ -147,6 +152,42 @@ public class PostServiceMongoImpl implements PostService{
 
 		List<Post> dtoList = postEntityList.stream().map(PostMongoMapper::toPost).toList();
 		return dtoList.isEmpty()? Optional.empty(): Optional.of(dtoList);
+	}
+
+	@Override
+	public List<Post> searchPosts(List<String> categories,
+	                              List<String> languages,
+	                              String search,
+	                              Sort sort)
+	{
+		Query query = new Query();
+
+		List<Criteria> criteriaList = new ArrayList<>();
+
+		criteriaList.add(Criteria.where("postStatus").is(PostStatus.AVAILABLE));
+
+		if (categories != null && !categories.isEmpty()) {
+			criteriaList.add(Criteria.where("bookRef.category").in(categories));
+		}
+
+		if (languages != null && !languages.isEmpty()) {
+			criteriaList.add(Criteria.where("bookRef.language").in(languages));
+		}
+
+		if (search != null && !search.isBlank()) {
+			criteriaList.add(
+					Criteria.where("bookRef.title")
+							.regex(search, "i") // "i" = case-insensitive
+			);
+		}
+
+		query.addCriteria(new Criteria().andOperator(criteriaList.toArray(new Criteria[0])));
+
+		query.with(sort);
+
+		List<PostMongoEntity> posts = mongoTemplate.find(query, PostMongoEntity.class);
+
+		return posts.stream().map(PostMongoMapper::toPost).toList();
 	}
 
 	@Override

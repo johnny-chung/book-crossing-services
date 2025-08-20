@@ -10,6 +10,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -40,17 +43,19 @@ public class MemberController {
 		return response;
 	}
 
-	@GetMapping("/{memberId}")
-	public Member getMemberDetails(@PathVariable UUID postId) {
-		return memberService.getMemberDetails(postId)
+	@GetMapping("/{auth0Id}")
+	@PreAuthorize("isAuthenticated()")
+	public Member getMemberDetails(@PathVariable UUID auth0Id, @AuthenticationPrincipal Jwt jwt) {
+		String tokenAuth0Id = jwt.getClaimAsString("sub");
+		return memberService.getMemberDetails(tokenAuth0Id)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Member not found"));
 	}
 
-	@GetMapping("/all")
-	public List<Member> getAll(){
-		return memberService.getAll()
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Members not found"));
-	}
+//	@GetMapping("/all")
+//	public List<Member> getAll(){
+//		return memberService.getAll()
+//				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Members not found"));
+//	}
 
 	@GetMapping("/health")
 	public ResponseEntity<String> healthCheck() {

@@ -7,9 +7,17 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 import org.springframework.web.client.RestTemplate;
 
-@SpringBootApplication(scanBasePackages = {"com.goodmanltd.book", "com.goodmanltd.core"})
-@EnableMongoRepositories(basePackages = "com.goodmanltd.core.dao.mongo.repository")
-@EntityScan(basePackages = "com.goodmanltd.core.dao.mongo.entity")
+@SpringBootApplication(scanBasePackages = {
+		"com.goodmanltd.book", "com.goodmanltd.core"})
+@EnableMongoRepositories(
+		basePackages = {
+				"com.goodmanltd.core.dao.mongo.repository",
+				"com.goodmanltd.book.dao.mongo.repository"
+		})
+@EntityScan(basePackages = {
+		"com.goodmanltd.core.dao.mongo.entity",
+		"com.goodmanltd.book.dao.mongo.entity"
+})
 public class BookServiceApp {
 	public static void main(String[] args) {
 

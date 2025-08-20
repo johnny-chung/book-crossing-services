@@ -1,5 +1,7 @@
 package com.goodmanltd.book.service;
 
+import com.goodmanltd.book.dto.CategoryDto;
+import com.goodmanltd.book.dto.LanguageDto;
 import com.goodmanltd.core.types.Book;
 import com.goodmanltd.book.dto.CreateBookRequest;
 
@@ -13,4 +15,8 @@ public interface BookService {
 	Optional<Book> findByBookId(UUID bookId);
 
 	Optional<List<Book>> findAll();
+
+	List<LanguageDto> findLanguages();
+
+	List<CategoryDto> findCategories();
 }

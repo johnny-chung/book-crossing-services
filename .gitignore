@@ -47,3 +47,5 @@ bin/
 application-local.yml
 
 secret.yml
+
+docker-command.txt

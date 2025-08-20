@@ -1,0 +1,11 @@
+docker build -t goodmanisltd/bookcrossing-book-service:latest ./book-service
+docker build -t goodmanisltd/bookcrossing-post-service:latest ./post-service
+docker build -t goodmanisltd/bookcrossing-order-service:latest ./order-service
+docker build -t goodmanisltd/bookcrossing-member-service:latest ./member-service
+docker build -t goodmanisltd/bookcrossing-message-service:latest ./message-service
+
+docker push goodmanisltd/bookcrossing-book-service:latest
+docker push goodmanisltd/bookcrossing-post-service:latest
+docker push goodmanisltd/bookcrossing-order-service:latest
+docker push goodmanisltd/bookcrossing-member-service:latest
+docker push goodmanisltd/bookcrossing-message-service:latest

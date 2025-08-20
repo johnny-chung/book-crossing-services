@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: member-service
-          image: member-service:latest
+          image: goodmanisltd/bookcrossing-member-service:latest
           ports:
             - containerPort: 8087
           env:
