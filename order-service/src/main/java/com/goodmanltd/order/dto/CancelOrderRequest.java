@@ -13,5 +13,5 @@ import java.util.UUID;
 public class CancelOrderRequest {
 	@NotNull
 	@NotBlank
-	private UUID orderId;
+	private UUID id;
 }

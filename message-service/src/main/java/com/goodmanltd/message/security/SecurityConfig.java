@@ -3,6 +3,7 @@ package com.goodmanltd.message.security;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
@@ -29,8 +30,9 @@ public class SecurityConfig {
 		http
 				.csrf(csrf -> csrf.disable())
 				.authorizeHttpRequests(auth -> auth
-					.requestMatchers("/conversation-list/**").authenticated()
-					.requestMatchers("/member/conversation-list").authenticated()
+					.requestMatchers(HttpMethod.GET, "/messages/health").permitAll()
+					.requestMatchers(HttpMethod.GET, "/messages/**").authenticated()
+					.requestMatchers(HttpMethod.POST, "/messages").authenticated()
 					.anyRequest().permitAll()
 		)
 				.oauth2ResourceServer(resourceServer ->

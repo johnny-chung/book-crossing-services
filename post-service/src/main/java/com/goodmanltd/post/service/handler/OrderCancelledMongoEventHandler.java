@@ -3,7 +3,6 @@ package com.goodmanltd.post.service.handler;
 import com.goodmanltd.core.dao.mongo.entity.PostMongoEntity;
 import com.goodmanltd.core.dao.mongo.repository.PostMongoRepository;
 import com.goodmanltd.core.dto.events.OrderCancelledEvent;
-import com.goodmanltd.core.dto.events.OrderCompletedEvent;
 import com.goodmanltd.core.dto.events.PostUpdatedEvent;
 import com.goodmanltd.core.exceptions.NotRetryableException;
 import com.goodmanltd.core.exceptions.RetryableException;

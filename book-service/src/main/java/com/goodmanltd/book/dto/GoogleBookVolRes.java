@@ -21,7 +21,7 @@ public class GoogleBookVolRes {
 	public static class VolumeInfo {
 		public String title;
 		public List<String> authors;
-		public String mainCategory;
+		public List<String> categories;
 		public String description;
 		public String language;
 		public ImageLinks imageLinks;

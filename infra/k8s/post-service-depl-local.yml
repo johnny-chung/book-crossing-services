@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: post-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: post-service
+  template:
+    metadata:
+      labels:
+        app: post-service
+    spec:
+      containers:
+        - name: post-service
+          image: post-service
+          ports:
+            - containerPort: 8085
+          env:
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-uri
+                  key: MONGO_URI
+            - name: AUTH0_ISSUER
+              valueFrom:
+                secretKeyRef:
+                  name: auth0-issuer
+                  key: AUTH0_ISSUER
+            - name: JWT_SET_URI
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-set-uri
+                  key: JWT_SET_URI
+            - name: GOOGLE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: google-api-key
+                  key: GOOGLE_API_KEY
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: post-service-srv
+spec:
+  type: ClusterIP
+  selector:
+    app: post-service
+  ports:
+    - name: post-service
+      protocol: TCP
+      port: 8085
+      targetPort: 8085

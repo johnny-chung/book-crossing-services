@@ -59,14 +59,26 @@ public class GoogleBooksClient {
 						GoogleBookVolRes.class
 				);
 				GoogleBookVolRes detailRes = bkDetailsResponse.getBody();
-
+				LOGGER.info("google detail res:" + detailRes);
 				if (detailRes != null) {
-					// copy language, imageLinks, description
-					volumeInfo.setDescription(detailRes.getVolumeInfo().getDescription());
-					volumeInfo.setLanguage(detailRes.getVolumeInfo().getLanguage());
-					volumeInfo.setImageLinks(detailRes.getVolumeInfo().getImageLinks());
-					volumeInfo.setMainCategory(detailRes.getVolumeInfo().getMainCategory());
+					GoogleBookVolRes.VolumeInfo detailInfo = detailRes.getVolumeInfo();
+					volumeInfo.setTitle(detailInfo.getTitle());
+					volumeInfo.setAuthors(detailInfo.getAuthors());
+					volumeInfo.setDescription(detailInfo.getDescription());
+					volumeInfo.setLanguage(detailInfo.getLanguage());
+					volumeInfo.setImageLinks(detailInfo.getImageLinks());
+					volumeInfo.setCategories(detailInfo.getCategories());
+				} else {
+					// fallback: copy from search result if detail fails
+					GoogleBookVolRes.VolumeInfo searchInfo = searchRes.getItems().get(0).getVolumeInfo();
+					volumeInfo.setTitle(searchInfo.getTitle());
+					volumeInfo.setAuthors(searchInfo.getAuthors());
+					volumeInfo.setDescription(searchInfo.getDescription());
+					volumeInfo.setLanguage(searchInfo.getLanguage());
+					volumeInfo.setImageLinks(searchInfo.getImageLinks());
+					volumeInfo.setCategories(searchInfo.getCategories());
 				}
+
 
 				combinedRes.setVolumeInfo(volumeInfo);
 				LOGGER.info("final combined res: " + combinedRes);

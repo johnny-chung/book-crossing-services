@@ -4,7 +4,9 @@ server:
 spring:
   kafka:
     bootstrap-servers: |
-      kafka-controller-0.kafka-controller-headless.default.svc.cluster.local:9092
+      kafka.default.svc.cluster.local:9092
+#      localhost:9092,localhost:9093,localhost:9094
+#      kafka-controller-0.kafka-controller-headless.default.svc.cluster.local:9092
 #      kafka-controller-1.kafka-controller-headless.default.svc.cluster.local:9092,
 #      kafka-controller-2.kafka-controller-headless.default.svc.cluster.local:9092
     producer:
@@ -30,19 +32,13 @@ spring:
           issuer-uri: ${AUTH0_ISSUER}
           jwk-set-uri: ${JWT_SET_URI}
           audiences:
-            - https://bookcrossing.goodmanltd.com
+            - book-crossing-services.goodmanltd.com
   profiles:
     active: mongo
 
 
-app:
-  kafka:
-    topics:
-      bookCreated: book-created-events-topic
-      bookUpdated: book-updated-events-topic
-
 auth0:
-  audience: https://bookcrossing.goodmanltd.com
+  audience: book-crossing-services.goodmanltd.com
 
 google:
   apiKey: ${GOOGLE_API_KEY}

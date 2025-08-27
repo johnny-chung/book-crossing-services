@@ -1,7 +1,7 @@
 package com.goodmanltd.book.dao.mongo.entity;
 
-import jakarta.persistence.Id;
-import jakarta.persistence.Version;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Version;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

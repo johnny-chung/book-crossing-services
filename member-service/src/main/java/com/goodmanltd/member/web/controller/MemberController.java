@@ -16,9 +16,6 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
-import java.util.UUID;
-
 @RestController
 @RequestMapping("/members")
 public class MemberController {
@@ -43,9 +40,9 @@ public class MemberController {
 		return response;
 	}
 
-	@GetMapping("/{auth0Id}")
+	@GetMapping("/profile/{auth0Id}")
 	@PreAuthorize("isAuthenticated()")
-	public Member getMemberDetails(@PathVariable UUID auth0Id, @AuthenticationPrincipal Jwt jwt) {
+	public Member getMemberDetails(@PathVariable String auth0Id, @AuthenticationPrincipal Jwt jwt) {
 		String tokenAuth0Id = jwt.getClaimAsString("sub");
 		return memberService.getMemberDetails(tokenAuth0Id)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Member not found"));

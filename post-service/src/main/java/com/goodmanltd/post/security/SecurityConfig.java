@@ -3,6 +3,7 @@ package com.goodmanltd.post.security;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
@@ -29,7 +30,8 @@ public class SecurityConfig {
 		http
 				.csrf(csrf -> csrf.disable())
 				.authorizeHttpRequests(auth -> auth
-				//.requestMatchers(HttpMethod.POST, "/books").authenticated()
+				.requestMatchers(HttpMethod.GET, "/posts/my-posts").authenticated()
+				.requestMatchers(HttpMethod.POST, "/posts").authenticated()
 				.anyRequest().permitAll()
 		)
 				.oauth2ResourceServer(resourceServer ->

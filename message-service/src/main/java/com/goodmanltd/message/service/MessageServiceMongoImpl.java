@@ -1,21 +1,21 @@
 package com.goodmanltd.message.service;
 
-import com.goodmanltd.core.dao.mongo.entity.mapper.MemberMongoMapper;
-import com.goodmanltd.core.exceptions.NotAuthorizedException;
-import com.goodmanltd.core.types.MemberReference;
-import com.goodmanltd.core.types.Message;
-import com.goodmanltd.core.dto.events.MessageCreatedEvent;
-import com.goodmanltd.core.exceptions.EntityNotFoundException;
-import com.goodmanltd.core.exceptions.MemberNotVerifiedException;
-import com.goodmanltd.core.kafka.KafkaTopics;
-import com.goodmanltd.core.types.MemberStatus;
 import com.goodmanltd.core.dao.mongo.entity.MemberMongoEntity;
 import com.goodmanltd.core.dao.mongo.entity.MessageMongoEntity;
 import com.goodmanltd.core.dao.mongo.entity.PostMongoEntity;
+import com.goodmanltd.core.dao.mongo.entity.mapper.MemberMongoMapper;
 import com.goodmanltd.core.dao.mongo.entity.mapper.MessageMongoMapper;
 import com.goodmanltd.core.dao.mongo.repository.MemberMongoRepository;
 import com.goodmanltd.core.dao.mongo.repository.MessageMongoRepository;
 import com.goodmanltd.core.dao.mongo.repository.PostMongoRepository;
+import com.goodmanltd.core.dto.events.MessageCreatedEvent;
+import com.goodmanltd.core.exceptions.EntityNotFoundException;
+import com.goodmanltd.core.exceptions.MemberNotVerifiedException;
+import com.goodmanltd.core.exceptions.NotAuthorizedException;
+import com.goodmanltd.core.kafka.KafkaTopics;
+import com.goodmanltd.core.types.MemberReference;
+import com.goodmanltd.core.types.MemberStatus;
+import com.goodmanltd.core.types.Message;
 import com.goodmanltd.message.dto.CreateMessageRequest;
 import com.goodmanltd.message.dto.GetConversationRequest;
 import com.goodmanltd.message.dto.GetConversationResponse;
@@ -55,7 +55,7 @@ public class MessageServiceMongoImpl implements MessageService{
 	}
 
 	@Override
-	public Message createMessage(CreateMessageRequest request) {
+	public Message createMessage(CreateMessageRequest request, String auth0Id) {
 
 		// check post existence
 		Optional<PostMongoEntity> existingPost = postRepository.findById(request.getPostId());
@@ -82,11 +82,18 @@ public class MessageServiceMongoImpl implements MessageService{
 			throw new MemberNotVerifiedException(request.getSenderId());
 		}
 
+		// check authorization
+		if (!Objects.equals(existingSender.get().getAuth0Id(), auth0Id) &&
+				!Objects.equals(existingReceiver.get().getAuth0Id(), auth0Id)) {
+			LOGGER.error("Not authorized to send message");
+			throw new NotAuthorizedException();
+		}
+
 		// check participant Id
-		if (request.getParticipantId() != request.getSenderId()
-				|| request.getParticipantId() != request.getReceiverId()) {
-			LOGGER.error("Participant Id mismatch, post not found: " + request.getPostId());
-			throw new EntityNotFoundException(request.getPostId(), "Post");
+		if (request.getParticipantId().equals(request.getSenderId())
+				&& request.getParticipantId().equals(request.getReceiverId())) {
+			LOGGER.error("Participant Id mismatch: " + request.getParticipantId());
+			throw new NotAuthorizedException();
 		}
 
 		// save to db
@@ -99,7 +106,7 @@ public class MessageServiceMongoImpl implements MessageService{
 		newEntity.setSender(senderRef);
 		newEntity.setReceiver(receiverRef);
 		newEntity.setParticipant(
-				request.getParticipantId() == existingSender.get().getId()?
+				request.getParticipantId().equals(existingSender.get().getId())?
 						senderRef:
 						receiverRef
 		);
@@ -124,39 +131,88 @@ public class MessageServiceMongoImpl implements MessageService{
 		List<MessageMongoEntity> entities =
 				messageRepository.findByPostIdAndParticipantId(request.getPostId(), request.getParticipantId());
 
+		if (entities.isEmpty()) {
+			return new GetConversationResponse(Collections.emptyList(), 1, null, null);
+		}
+
+		// Sort messages by sentAt ascending (oldest → newest)
 		List<Message> allMessages = entities.stream()
 				.map(MessageMongoMapper::toMessage)
+				.sorted(Comparator.comparing(Message::getSentAt).reversed())
 				.toList();
 
 		UUID nextMsgId = request.getNextMsgId();
-		int startIndex = 0;
+		UUID startMsgId = request.getStartMsgId();
+		List<Message> messages;
+		UUID newNextMsgId = null;
+		UUID newStartMsgId = null;
 
-		// If nextMsgId is provided, find its index
-		if (nextMsgId != null) {
-			startIndex = -1;
-			for (int i = 0; i < allMessages.size(); i++) {
-				if (allMessages.get(i).getId().equals(nextMsgId)) {
-					startIndex = i;
-					break;
+		int limit = request.getLimit() != null ? request.getLimit().intValue() : 25;
+
+		if (request.getPage().intValue() == 1) {
+			// Page 1: newest messages
+			if (nextMsgId != null) {
+				// Return messages from start until nextMsgId (exclusive)
+				int endIndex = -1;
+				for (int i = 0; i < allMessages.size(); i++) {
+					if (allMessages.get(i).getId().equals(nextMsgId)) {
+						endIndex = i;
+						break;
+					}
+				}
+				if (endIndex == -1) endIndex = allMessages.size();
+				messages = allMessages.subList(0, endIndex);
+
+				newNextMsgId = nextMsgId; // keep the provided nextMsgId
+			} else {
+				// nextMsgId == null → return newest messages up to limit
+				int totalMessages = allMessages.size();
+				int endIndex = Math.min(limit, totalMessages);
+				messages = allMessages.subList(0, endIndex);
+
+				// If older messages remain before this batch
+				newNextMsgId = (endIndex < totalMessages) ?
+						allMessages.get(endIndex).getId() : null;
+			}
+
+			if (!messages.isEmpty()) {
+				newStartMsgId = messages.getFirst().getId();
+			}
+
+		} else {
+			// Page >= 2: use startMsgId + limit
+			int startIndex = 0;
+
+			if (startMsgId != null) {
+				// find start index after the startMsgId
+				startIndex = -1;
+				for (int i = 0; i < allMessages.size(); i++) {
+					if (allMessages.get(i).getId().equals(startMsgId)) {
+						startIndex = i + 1;
+						break;
+					}
+				}
+				if (startIndex == -1 || startIndex >= allMessages.size()) {
+					return new GetConversationResponse(Collections.emptyList(),
+							request.getPage().intValue(), startMsgId, null);
 				}
 			}
-			if (startIndex == -1 || startIndex >= allMessages.size() - 1) {
-				// nextMsgId not found or no more messages
-				return new GetConversationResponse(Collections.emptyList(), request.getPage(), null);
+
+			int endIndex = Math.min(startIndex + limit, allMessages.size());
+			messages = allMessages.subList(startIndex, endIndex);
+
+			// nextMsgId = immediate next message after the batch, or null if end
+			newNextMsgId = endIndex < allMessages.size() ? allMessages.get(endIndex).getId() : null;
+			if (!messages.isEmpty()) {
+				newStartMsgId = messages.getFirst().getId(); // last message in this batch
 			}
-			startIndex++; // start after the given nextMsgId
 		}
 
-		int max = request.getLimit() != null ? request.getLimit().intValue() : allMessages.size();
-		int endIndex = Math.min(startIndex + max, allMessages.size());
-
-		List<Message> messages = allMessages.subList(startIndex, endIndex);
-
-		// Determine the nextMsgId for pagination
-		UUID newNextMsgId = endIndex < allMessages.size() ? allMessages.get(endIndex).getId() : null;
-
-		return new GetConversationResponse(messages, request.getPage(), newNextMsgId);
+		return new GetConversationResponse(
+				messages, request.getPage().intValue(), newStartMsgId, newNextMsgId
+		);
 	}
+
 
 	@Override
 	public GetParticipantListByPost getParticipantListByPost(UUID postId, String requestAuth0Id) {
@@ -186,7 +242,7 @@ public class MessageServiceMongoImpl implements MessageService{
 				.map(MemberMongoMapper::toMemberRef)
 				.toList();
 
-		return new GetParticipantListByPost(postId, participantRefs);
+		return new GetParticipantListByPost(postId, existingPost.get().getBookRef() ,participantRefs);
 	}
 
 	@Override
@@ -203,28 +259,33 @@ public class MessageServiceMongoImpl implements MessageService{
 				.all();
 
 		return postIds.stream()
-				.map(postId -> {
-					// Get participant IDs for this post
-					List<UUID> participantIds = mongoTemplate.query(MessageMongoEntity.class)
-							.distinct("participant.id")
-							.matching(Query.query(Criteria.where("postId").is(postId)))
-							.as(UUID.class)
-							.all();
+				.map(postId -> postRepository.findById(postId)
+						.map(existingPost -> {
+							// Get participant IDs for this post
+							List<UUID> participantIds = mongoTemplate.query(MessageMongoEntity.class)
+									.distinct("participant.id")
+									.matching(Query.query(Criteria.where("postId").is(postId)))
+									.as(UUID.class)
+									.all();
 
-					// Fetch member entities
-					List<MemberMongoEntity> members = memberRepository.findAllById(participantIds);
+							// Fetch member entities
+							List<MemberMongoEntity> members = memberRepository.findAllById(participantIds);
 
-					// Map to references
-					List<MemberReference> participantRefs = members.stream()
-							.map(MemberMongoMapper::toMemberRef)
-							.collect(Collectors.toList());
+							// Map to references
+							List<MemberReference> participantRefs = members.stream()
+									.map(MemberMongoMapper::toMemberRef)
+									.collect(Collectors.toList());
 
-					// Build response element
-					GetParticipantListByPost elem = new GetParticipantListByPost();
-					elem.setPostId(postId);
-					elem.setParticipants(participantRefs);
-					return elem;
-				})
+							// Build response element
+							GetParticipantListByPost elem = new GetParticipantListByPost();
+							elem.setPostId(postId);
+							elem.setBookRef(existingPost.getBookRef());
+							elem.setParticipants(participantRefs);
+							return elem;
+						})
+				)
+				.filter(Optional::isPresent)        // remove empty optionals
+				.map(Optional::get)                 // unwrap
 				.collect(Collectors.toList());
 	}
 

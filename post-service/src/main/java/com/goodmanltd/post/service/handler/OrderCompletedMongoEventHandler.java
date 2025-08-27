@@ -1,13 +1,13 @@
 package com.goodmanltd.post.service.handler;
 
-import com.goodmanltd.core.dto.events.*;
+import com.goodmanltd.core.dao.mongo.entity.PostMongoEntity;
+import com.goodmanltd.core.dao.mongo.repository.PostMongoRepository;
+import com.goodmanltd.core.dto.events.OrderCompletedEvent;
+import com.goodmanltd.core.dto.events.PostUpdatedEvent;
 import com.goodmanltd.core.exceptions.NotRetryableException;
 import com.goodmanltd.core.exceptions.RetryableException;
 import com.goodmanltd.core.kafka.KafkaTopics;
-import com.goodmanltd.core.types.OrderStatus;
 import com.goodmanltd.core.types.PostStatus;
-import com.goodmanltd.core.dao.mongo.entity.PostMongoEntity;
-import com.goodmanltd.core.dao.mongo.repository.PostMongoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;

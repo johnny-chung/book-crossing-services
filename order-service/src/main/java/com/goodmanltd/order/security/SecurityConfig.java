@@ -27,9 +27,14 @@ public class SecurityConfig {
 
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-		http.authorizeHttpRequests(auth -> auth
-				//.requestMatchers(HttpMethod.POST, "/books").authenticated()
-				.requestMatchers("/orders/my-orders").authenticated()
+		http
+			.csrf(csrf -> csrf.disable())
+			.authorizeHttpRequests(auth -> auth
+				.requestMatchers(HttpMethod.GET, "/orders/health").permitAll()
+				.requestMatchers(HttpMethod.GET,"/orders/**").authenticated()
+				.requestMatchers(HttpMethod.GET,"/orders/my-orders").authenticated()
+				.requestMatchers(HttpMethod.GET,"/orders/postId/*").authenticated()
+				.requestMatchers(HttpMethod.POST, "/orders").authenticated()
 				.requestMatchers(HttpMethod.PUT, "/orders/*/completed").authenticated()
 				.requestMatchers(HttpMethod.PUT, "/orders/*/cancel").authenticated()
 				.anyRequest().permitAll()

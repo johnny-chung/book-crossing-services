@@ -1,5 +1,6 @@
 package com.goodmanltd.book.config;
 
+import com.goodmanltd.core.kafka.KafkaTopics;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,8 +19,7 @@ import java.util.Map;
 @Configuration
 public class KafkaConfig {
 
-	@Value("${app.kafka.topics.bookCreated}")
-	private String bookCreatedTopic;
+
 	private final static Integer TOPIC_REPLICATION_FACTOR=3;
 	private final static Integer TOPIC_PARTITIONS=3;
 
@@ -67,7 +67,7 @@ public class KafkaConfig {
 
 	@Bean
 	NewTopic createBookEventsTopic() {
-		return TopicBuilder.name(bookCreatedTopic)
+		return TopicBuilder.name(KafkaTopics.BOOK_CREATED)
 				.partitions(TOPIC_PARTITIONS)
 				.replicas(TOPIC_REPLICATION_FACTOR)
 				.build();

@@ -12,7 +12,7 @@ import java.util.UUID;
 
 
 public interface MessageService {
-	Message createMessage (CreateMessageRequest request);
+	Message createMessage (CreateMessageRequest request, String auth0Id);
 
 	GetConversationResponse getConversation(GetConversationRequest request);
 

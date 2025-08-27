@@ -1,27 +1,27 @@
 package com.goodmanltd.order.service;
 
 import com.goodmanltd.core.types.Order;
-import com.goodmanltd.order.dto.CancelOrderRequest;
-import com.goodmanltd.order.dto.CompleteOrderRequest;
-import com.goodmanltd.order.dto.CreateOrderRequest;
+import com.goodmanltd.order.dto.*;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface OrderService {
-	Order createOrder (CreateOrderRequest request);
+	CreateOrderResponse createOrder (CreateOrderRequest request);
 
-	Order completeOrder (CompleteOrderRequest request, String auth0Id);
+	CompleteOrderResponse completeOrder (CompleteOrderRequest request, String auth0Id);
 
-	Order cancelOrder (CancelOrderRequest request, String auth0Id);
+	CancelOrderResponse cancelOrder (CancelOrderRequest request, String auth0Id);
 
 	Optional<Order> findByOrderId(UUID orderId);
 	Optional<List<Order>> findByPostId(UUID postId);
 
-	Optional<List<Order>> findByMemberId(UUID memberId);
+	List<Order> findByMemberId(UUID memberId);
 
-	Optional<List<Order>> findByAuth0Id(String auth0Id);
+	List<Order> findByAuth0Id(String auth0Id);
+
+	List<Order> findMyOrders (String auth0Id, List<String> status, String search);
 
 	Optional<List<Order>> findAll();
 

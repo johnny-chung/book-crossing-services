@@ -135,7 +135,7 @@ public class PostServiceMongoImpl implements PostService{
 
 		if (post.isEmpty()) return Optional.empty();
 
-		BeanUtils.copyProperties(post, response);
+		BeanUtils.copyProperties(post.get(), response);
 		Optional<Book> book = bookRepository.findById(post.get().getBookRef().getId()).map(BookMongoMapper::toBook);
 		book.ifPresent(response::setBookDetails);
 
@@ -191,12 +191,34 @@ public class PostServiceMongoImpl implements PostService{
 	}
 
 	@Override
-	public Optional<List<Post>> findMemberPost(String auth0Id) {
+	public List<Post> findMemberPost(String auth0Id, List<String> status, String search) {
 
 
-		List<PostMongoEntity> entities = postRepository.findByPostBy_Auth0Id(auth0Id);
-		List<Post> dtoList = entities.stream().map(PostMongoMapper::toPost).toList();
-		return dtoList.isEmpty()? Optional.empty(): Optional.of(dtoList);
+		Query query = new Query();
+
+		List<Criteria> criteriaList = new ArrayList<>();
+
+		// Always filter by auth0Id
+		criteriaList.add(Criteria.where("postBy.auth0Id").is(auth0Id));
+
+		// Optional filter: postStatus
+		if (status != null && !status.isEmpty()) {
+			criteriaList.add(Criteria.where("postStatus").in(status));
+		}
+
+		// Optional filter: title search
+		if (search != null && !search.isBlank()) {
+			criteriaList.add(
+					Criteria.where("bookRef.title").regex(search, "i") // case-insensitive
+			);
+		}
+
+		query.addCriteria(new Criteria().andOperator(criteriaList.toArray(new Criteria[0])));
+
+		List<PostMongoEntity> entities = mongoTemplate.find(query, PostMongoEntity.class);
+
+		return entities.stream().map(PostMongoMapper::toPost).toList();
+
 	}
 
 

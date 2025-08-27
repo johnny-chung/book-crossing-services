@@ -1,40 +1,37 @@
 package com.goodmanltd.order.service;
 
-import com.goodmanltd.core.dao.mongo.entity.mapper.MemberMongoMapper;
-import com.goodmanltd.core.dao.mongo.entity.mapper.PostMongoMapper;
-import com.goodmanltd.core.dto.events.OrderCancelledEvent;
-import com.goodmanltd.core.exceptions.*;
-import com.goodmanltd.core.types.Order;
-import com.goodmanltd.core.dto.events.OrderCompletedEvent;
-import com.goodmanltd.core.dto.events.OrderCreatedEvent;
-import com.goodmanltd.core.kafka.KafkaTopics;
-import com.goodmanltd.core.types.MemberStatus;
-import com.goodmanltd.core.types.OrderStatus;
-import com.goodmanltd.core.types.PostStatus;
 import com.goodmanltd.core.dao.mongo.entity.MemberMongoEntity;
 import com.goodmanltd.core.dao.mongo.entity.OrderMongoEntity;
 import com.goodmanltd.core.dao.mongo.entity.PostMongoEntity;
+import com.goodmanltd.core.dao.mongo.entity.mapper.MemberMongoMapper;
 import com.goodmanltd.core.dao.mongo.entity.mapper.OrderMongoMapper;
+import com.goodmanltd.core.dao.mongo.entity.mapper.PostMongoMapper;
 import com.goodmanltd.core.dao.mongo.repository.BookMongoRepository;
 import com.goodmanltd.core.dao.mongo.repository.MemberMongoRepository;
 import com.goodmanltd.core.dao.mongo.repository.OrderMongoRepository;
 import com.goodmanltd.core.dao.mongo.repository.PostMongoRepository;
-import com.goodmanltd.order.dto.CancelOrderRequest;
-import com.goodmanltd.order.dto.CompleteOrderRequest;
-import com.goodmanltd.order.dto.CreateOrderRequest;
+import com.goodmanltd.core.dto.events.OrderCancelledEvent;
+import com.goodmanltd.core.dto.events.OrderCompletedEvent;
+import com.goodmanltd.core.dto.events.OrderCreatedEvent;
+import com.goodmanltd.core.exceptions.*;
+import com.goodmanltd.core.kafka.KafkaTopics;
+import com.goodmanltd.core.types.MemberStatus;
+import com.goodmanltd.core.types.Order;
+import com.goodmanltd.core.types.OrderStatus;
+import com.goodmanltd.core.types.PostStatus;
+import com.goodmanltd.order.dto.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
-
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Profile("mongo")
 @Service
@@ -43,22 +40,24 @@ public class OrderServiceMongoImpl implements OrderService {
 	private final OrderMongoRepository orderRepository;
 	private final MemberMongoRepository memberRepository;
 	private final KafkaTemplate<String, Object> kafkaTemplate;
+	private final MongoTemplate mongoTemplate;
 
 //	@Value("${app.kafka.topics.orderCreated}")
 //	private String orderCreatedTopic;
 
 	private final Logger LOGGER = LoggerFactory.getLogger(this.getClass());
 
-	public OrderServiceMongoImpl(BookMongoRepository bookRepository, PostMongoRepository postRepository, OrderMongoRepository orderRepository, MemberMongoRepository memberRepostory, KafkaTemplate<String, Object> kafkaTemplate) {
+	public OrderServiceMongoImpl(BookMongoRepository bookRepository, PostMongoRepository postRepository, OrderMongoRepository orderRepository, MemberMongoRepository memberRepostory, KafkaTemplate<String, Object> kafkaTemplate, MongoTemplate mongoTemplate) {
 		this.postRepository = postRepository;
 
 		this.orderRepository = orderRepository;
 		this.memberRepository = memberRepostory;
 		this.kafkaTemplate = kafkaTemplate;
+		this.mongoTemplate = mongoTemplate;
 	}
 
 	@Override
-	public Order createOrder(CreateOrderRequest request) {
+	public CreateOrderResponse createOrder(CreateOrderRequest request) {
 
 		// check post existence
 		Optional<PostMongoEntity> existingPost = postRepository.findById(request.getPostId());
@@ -110,21 +109,24 @@ public class OrderServiceMongoImpl implements OrderService {
 
 		LOGGER.info("*** new order id" + saved.getId());
 
-		return OrderMongoMapper.toOrder(saved);
+
+		CreateOrderResponse response = new CreateOrderResponse();
+		BeanUtils.copyProperties(OrderMongoMapper.toOrder(saved), response);
+		return response;
 	}
 
 	@Override
-	public Order completeOrder(CompleteOrderRequest request, String auth0Id) {
+	public CompleteOrderResponse completeOrder(CompleteOrderRequest request, String auth0Id) {
 		// check for order existence
-		Optional<OrderMongoEntity> existingOrderEntity = orderRepository.findById(request.getOrderId());
+		Optional<OrderMongoEntity> existingOrderEntity = orderRepository.findById(request.getId());
 		if (existingOrderEntity.isEmpty()) {
-			LOGGER.error("Order not found: " + request.getOrderId());
-			throw new EntityNotFoundException(request.getOrderId(), "Order");
+			LOGGER.error("Order not found: " + request.getId());
+			throw new EntityNotFoundException(request.getId(), "Order");
 		}
 
-		if (!Objects.equals(existingOrderEntity.get().getOrderBy().getAuth0Id(), auth0Id) ||
+		if (!Objects.equals(existingOrderEntity.get().getOrderBy().getAuth0Id(), auth0Id) &&
 				!Objects.equals(existingOrderEntity.get().getPostRef().getPostBy().getAuth0Id(), auth0Id)) {
-			LOGGER.error("Not Authorized: " + request.getOrderId());
+			LOGGER.error("Not Authorized: " + request.getId());
 			throw new NotAuthorizedException();
 		}
 
@@ -143,21 +145,24 @@ public class OrderServiceMongoImpl implements OrderService {
 
 		LOGGER.info("*** order id marked completed" + saved.getId());
 
-		return OrderMongoMapper.toOrder(saved);
+
+		CompleteOrderResponse completeOrderResponse = new CompleteOrderResponse();
+		BeanUtils.copyProperties(OrderMongoMapper.toOrder(saved), completeOrderResponse);
+		return completeOrderResponse;
 	}
 
 	@Override
-	public Order cancelOrder(CancelOrderRequest request, String auth0Id) {
+	public CancelOrderResponse cancelOrder(CancelOrderRequest request, String auth0Id) {
 		// check for order existence
-		Optional<OrderMongoEntity> existingOrderEntity = orderRepository.findById(request.getOrderId());
+		Optional<OrderMongoEntity> existingOrderEntity = orderRepository.findById(request.getId());
 		if (existingOrderEntity.isEmpty()) {
-			LOGGER.error("Order not found: " + request.getOrderId());
-			throw new EntityNotFoundException(request.getOrderId(), "Order");
+			LOGGER.error("Order not found: " + request.getId());
+			throw new EntityNotFoundException(request.getId(), "Order");
 		}
 
-		if (!Objects.equals(existingOrderEntity.get().getOrderBy().getAuth0Id(), auth0Id) ||
+		if (!Objects.equals(existingOrderEntity.get().getOrderBy().getAuth0Id(), auth0Id) &&
 				!Objects.equals(existingOrderEntity.get().getPostRef().getPostBy().getAuth0Id(), auth0Id)) {
-			LOGGER.error("Not Authorized: " + request.getOrderId());
+			LOGGER.error("Not Authorized: " + auth0Id);
 			throw new NotAuthorizedException();
 		}
 
@@ -176,7 +181,10 @@ public class OrderServiceMongoImpl implements OrderService {
 
 		LOGGER.info("*** order id marked cancelled" + saved.getId());
 
-		return OrderMongoMapper.toOrder(saved);
+
+		CancelOrderResponse cancelOrderResponse = new CancelOrderResponse();
+		BeanUtils.copyProperties(OrderMongoMapper.toOrder(saved), cancelOrderResponse);
+		return cancelOrderResponse;
 	}
 
 
@@ -194,15 +202,14 @@ public class OrderServiceMongoImpl implements OrderService {
 	}
 
 	@Override
-	public Optional<List<Order>> findByMemberId(UUID memberId) {
+	public List<Order> findByMemberId(UUID memberId) {
 		List<OrderMongoEntity> entities = orderRepository.findByPostRef_PostBy_Id(memberId);
-		List<Order> dtoList = entities.stream().map(OrderMongoMapper::toOrder).toList();
+		return entities.stream().map(OrderMongoMapper::toOrder).toList();
 
-		return dtoList.isEmpty() ? Optional.empty() : Optional.of(dtoList);
 	}
 
 	@Override
-	public Optional<List<Order>> findByAuth0Id(String auth0Id) {
+	public List<Order> findByAuth0Id(String auth0Id) {
 		Optional<MemberMongoEntity> existingMember = memberRepository.findByAuth0Id(auth0Id);
 		if (existingMember.isEmpty()) {
 			LOGGER.error("Member not found: " + auth0Id);
@@ -212,6 +219,36 @@ public class OrderServiceMongoImpl implements OrderService {
 
 		return findByMemberId(memberId);
 	}
+
+	@Override
+	public List<Order> findMyOrders(String auth0Id, List<String> status, String search) {
+		Query query = new Query();
+
+		List<Criteria> criteriaList = new ArrayList<>();
+
+		// Always filter by auth0Id
+		criteriaList.add(Criteria.where("orderBy.auth0Id").is(auth0Id));
+
+		// Optional filter: orderStatus
+		if (status != null && !status.isEmpty()) {
+			criteriaList.add(Criteria.where("orderStatus").in(status));
+		}
+
+		// Optional filter: title search
+		if (search != null && !search.isBlank()) {
+			criteriaList.add(
+					Criteria.where("postRef.bookRef.title").regex(search, "i") // case-insensitive
+			);
+		}
+
+		query.addCriteria(new Criteria().andOperator(criteriaList.toArray(new Criteria[0])));
+
+		List<OrderMongoEntity> entities = mongoTemplate.find(query, OrderMongoEntity.class);
+
+		return entities.stream().map(OrderMongoMapper::toOrder).toList();
+
+	}
+
 
 	@Override
 	public Optional<List<Order>> findAll() {

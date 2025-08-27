@@ -13,9 +13,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class GetConversationResponse {
 	List<Message> messages;
-
-	Number page;
-
+	Integer page;
+	UUID startMsgId;
 	UUID nextMsgId;
-
 }

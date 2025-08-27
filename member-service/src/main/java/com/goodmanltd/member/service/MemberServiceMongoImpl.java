@@ -1,13 +1,12 @@
 package com.goodmanltd.member.service;
 
-import com.goodmanltd.core.exceptions.NotAuthorizedException;
-import com.goodmanltd.core.types.Member;
-import com.goodmanltd.core.dto.events.MemberCreatedEvent;
-import com.goodmanltd.core.kafka.KafkaTopics;
-import com.goodmanltd.core.types.MemberStatus;
 import com.goodmanltd.core.dao.mongo.entity.MemberMongoEntity;
 import com.goodmanltd.core.dao.mongo.entity.mapper.MemberMongoMapper;
 import com.goodmanltd.core.dao.mongo.repository.MemberMongoRepository;
+import com.goodmanltd.core.dto.events.MemberCreatedEvent;
+import com.goodmanltd.core.kafka.KafkaTopics;
+import com.goodmanltd.core.types.Member;
+import com.goodmanltd.core.types.MemberStatus;
 import com.goodmanltd.member.dto.CreateMemberRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +17,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 

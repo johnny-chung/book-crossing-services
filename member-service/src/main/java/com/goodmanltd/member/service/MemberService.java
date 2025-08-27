@@ -5,7 +5,6 @@ import com.goodmanltd.member.dto.CreateMemberRequest;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 
 public interface MemberService {

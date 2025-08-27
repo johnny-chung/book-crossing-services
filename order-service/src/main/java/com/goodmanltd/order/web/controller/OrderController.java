@@ -32,36 +32,36 @@ public class OrderController {
 
 	@PostMapping
 	@ResponseStatus(HttpStatus.ACCEPTED)
+	@PreAuthorize("isAuthenticated()")
 	public CreateOrderResponse createOrder(
 			@RequestBody @Valid CreateOrderRequest request)
 	{
-		Order createdOrder = orderService.createOrder(request);
-
-		var response = new CreateOrderResponse();
-		BeanUtils.copyProperties(createdOrder, response);
-		response.setOrderId(createdOrder.getId());
-		return response;
+		return orderService.createOrder(request);
 	}
 
 	@GetMapping("/my-orders")
 	@PreAuthorize("isAuthenticated()")
-	public List<Order> getOrdersByAuthenticatedUser(@AuthenticationPrincipal Jwt jwt) {
+	public List<Order> getOrdersByAuthenticatedUser(
+			@RequestParam(required = false) List<String> status,
+			@RequestParam(required = false) String search,
+			@AuthenticationPrincipal Jwt jwt) {
 		String auth0Id = jwt.getClaimAsString("sub"); // Or use custom claim if needed
 
 		LOGGER.info("Fetching orders for Auth0 ID: {}", auth0Id);
 
-		return orderService.findByAuth0Id(auth0Id)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No orders found for this user"));
+		return orderService.findMyOrders(auth0Id, status, search);
 	}
 
 
 	@GetMapping("/{orderId}")
+	@PreAuthorize("isAuthenticated()")
 	public Order getOrderDetails(@PathVariable UUID orderId) {
 		return orderService.findByOrderId(orderId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 	}
 
 	@GetMapping("/postId/{postId}")
+	@PreAuthorize("isAuthenticated()")
 	public List<Order> getOrderByPost(@PathVariable UUID postId) {
 		return orderService.findByPostId(postId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
@@ -76,10 +76,7 @@ public class OrderController {
 			@AuthenticationPrincipal Jwt jwt
 	) {
 		String auth0Id = jwt.getClaimAsString("sub");
-		Order completedOrder =  orderService.completeOrder(request, auth0Id);
-		CompleteOrderResponse completeOrderResponse = new CompleteOrderResponse();
-		BeanUtils.copyProperties(completedOrder, completeOrderResponse);
-		return completeOrderResponse;
+		return  orderService.completeOrder(request, auth0Id);
 	}
 
 	@PutMapping("/{orderId}/cancel")
@@ -89,11 +86,8 @@ public class OrderController {
 			@AuthenticationPrincipal Jwt jwt
 	) {
 		String auth0Id = jwt.getClaimAsString("sub");
+		return orderService.cancelOrder(request, auth0Id );
 
-		Order cancelledOrder =  orderService.cancelOrder(request, auth0Id );
-		CancelOrderResponse cancelOrderResponse = new CancelOrderResponse();
-		BeanUtils.copyProperties(cancelledOrder, cancelOrderResponse);
-		return cancelOrderResponse;
 	}
 
 	@GetMapping("/all")

@@ -14,7 +14,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.kafka.annotation.KafkaHandler;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,11 +28,11 @@ public class PostReservedMongoEventHandler {
 
 	private final Logger LOGGER = LoggerFactory.getLogger(this.getClass());
 
-	private final KafkaTemplate<String, Object> kafkaTemplate;
+
 	private final PostMongoRepository postRepository;
 
-	public PostReservedMongoEventHandler(KafkaTemplate<String, Object> kafkaTemplate, PostMongoRepository postRepository) {
-		this.kafkaTemplate = kafkaTemplate;
+	public PostReservedMongoEventHandler(PostMongoRepository postRepository) {
+
 		this.postRepository = postRepository;
 	}
 

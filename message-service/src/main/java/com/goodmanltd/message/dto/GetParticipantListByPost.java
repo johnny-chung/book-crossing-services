@@ -1,5 +1,6 @@
 package com.goodmanltd.message.dto;
 
+import com.goodmanltd.core.types.BookReference;
 import com.goodmanltd.core.types.MemberReference;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -13,5 +14,6 @@ import java.util.UUID;
 @AllArgsConstructor
 public class GetParticipantListByPost {
 	private UUID postId;
+	private BookReference bookRef;
 	List<MemberReference> participants;
 }

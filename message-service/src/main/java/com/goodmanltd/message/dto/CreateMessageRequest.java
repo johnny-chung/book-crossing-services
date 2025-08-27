@@ -14,19 +14,15 @@ import java.util.UUID;
 public class CreateMessageRequest {
 
 	@NotNull
-	@NotBlank
 	private UUID senderId;
 
 	@NotNull
-	@NotBlank
 	private UUID receiverId;
 
 	@NotNull
-	@NotBlank
 	private UUID postId;
 
 	@NotNull
-	@NotBlank
 	private UUID participantId;
 
 	@NotNull

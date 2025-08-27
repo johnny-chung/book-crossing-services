@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -17,7 +18,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.data.domain.Sort;
 
 import java.util.List;
 import java.util.UUID;
@@ -51,6 +51,7 @@ public class PostController {
 
 	@PostMapping
 	@ResponseStatus(HttpStatus.ACCEPTED)
+	@PreAuthorize("isAuthenticated()")
 	public CreatePostResponse createPost(
 			@RequestBody @Valid CreatePostRequest request)
 	{
@@ -69,10 +70,12 @@ public class PostController {
 
 	@GetMapping("/my-posts")
 	@PreAuthorize("isAuthenticated()")
-	public List<Post> getPostDetails(@AuthenticationPrincipal Jwt jwt) {
+	public List<Post> getPostDetails(
+			@RequestParam(required = false) List<String> status,
+			@RequestParam(required = false) String search,
+			@AuthenticationPrincipal Jwt jwt) {
 		String auth0Id = jwt.getClaimAsString("sub");
-		return postService.findMemberPost(auth0Id)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found"));
+		return postService.findMemberPost(auth0Id, status, search);
 	}
 
 	@GetMapping("/available")

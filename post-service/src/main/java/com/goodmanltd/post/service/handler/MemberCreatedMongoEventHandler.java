@@ -1,11 +1,11 @@
 package com.goodmanltd.post.service.handler;
 
+import com.goodmanltd.core.dao.mongo.entity.MemberMongoEntity;
+import com.goodmanltd.core.dao.mongo.repository.MemberMongoRepository;
 import com.goodmanltd.core.dto.events.MemberCreatedEvent;
 import com.goodmanltd.core.exceptions.NotRetryableException;
 import com.goodmanltd.core.exceptions.RetryableException;
 import com.goodmanltd.core.kafka.KafkaTopics;
-import com.goodmanltd.core.dao.mongo.entity.MemberMongoEntity;
-import com.goodmanltd.core.dao.mongo.repository.MemberMongoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;

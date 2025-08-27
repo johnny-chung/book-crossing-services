@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: book-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: book-service
+  template:
+    metadata:
+      labels:
+        app: book-service
+    spec:
+      containers:
+        - name: book-service
+          image: book-service
+          ports:
+            - containerPort: 8081
+          env:
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-uri
+                  key: MONGO_URI
+            - name: AUTH0_ISSUER
+              valueFrom:
+                secretKeyRef:
+                  name: auth0-issuer
+                  key: AUTH0_ISSUER
+            - name: JWT_SET_URI
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-set-uri
+                  key: JWT_SET_URI
+            - name: GOOGLE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: google-api-key
+                  key: GOOGLE_API_KEY
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: book-service-srv
+spec:
+  type: ClusterIP
+  selector:
+    app: book-service
+  ports:
+    - name: book-service
+      protocol: TCP
+      port: 8081
+      targetPort: 8081

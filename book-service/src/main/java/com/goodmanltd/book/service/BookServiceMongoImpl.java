@@ -67,22 +67,40 @@ public class BookServiceMongoImpl implements BookService{
 
 		if (googleBookInfo.isPresent()) {
 			GoogleBookVolRes googleBook = googleBookInfo.get();
+			LOGGER.info("** googleBook: " + googleBook);
+//			entity.setTitle(googleBook.getVolumeInfo().getTitle());
+//			entity.setCategory(googleBook.getVolumeInfo().getMainCategory());//
+//			entity.setLanguage(googleBook.getVolumeInfo().getLanguage());//
+//			entity.setDescription(googleBook.getVolumeInfo().getDescription());//
+//			entity.setThumbnail(googleBook.getVolumeInfo().getImageLinks().getThumbnail());//
+//			entity.setImgLarge(googleBook.getVolumeInfo().getImageLinks().getLarge());//
+//			entity.setTextSnippet(googleBook.getSearchInfo().getTextSnippet());
 
-			entity.setTitle(googleBook.getVolumeInfo().getTitle());
+			List<String> authors = googleBook.getVolumeInfo().getAuthors();
+			entity.setAuthors(authors != null ? String.join(", ", authors) : "");
 
-			entity.setAuthors(String.join(", ", googleBook.getVolumeInfo().getAuthors()));
 
-			entity.setCategory(googleBook.getVolumeInfo().getMainCategory());
+			List<String> categories = googleBook.getVolumeInfo().getCategories();
+			entity.setCategory(
+					(categories != null && !categories.isEmpty()) ? categories.get(0) : ""
+			);
+			entity.setTitle(
+					Optional.ofNullable(googleBook.getVolumeInfo().getTitle())
+							.orElse(""));
 
-			entity.setLanguage(googleBook.getVolumeInfo().getLanguage());
-
-			entity.setDescription(googleBook.getVolumeInfo().getDescription());
-
-			entity.setThumbnail(googleBook.getVolumeInfo().getImageLinks().getThumbnail());
-
-			entity.setImgLarge(googleBook.getVolumeInfo().getImageLinks().getLarge());
-
-			entity.setTextSnippet(googleBook.getSearchInfo().getTextSnippet());
+			entity.setLanguage(
+					Optional.ofNullable(googleBook.getVolumeInfo().getLanguage())
+							.orElse("Unknown"));
+			entity.setDescription(
+					Optional.ofNullable(googleBook.getVolumeInfo().getDescription())
+							.orElse(""));
+			entity.setThumbnail(
+					Optional.ofNullable(googleBook.getVolumeInfo().getImageLinks().getThumbnail())
+					.orElse(""));
+			entity.setImgLarge(Optional.ofNullable(googleBook.getVolumeInfo().getImageLinks().getLarge())
+					.orElse(entity.getThumbnail()));
+			entity.setTextSnippet(Optional.ofNullable(googleBook.getSearchInfo().getTextSnippet())
+					.orElse(""));
 
 		} else {
 			// throw exception
@@ -118,9 +136,11 @@ public class BookServiceMongoImpl implements BookService{
 			BeanUtils.copyProperties(existingLanguage.get(), languageToSave);
 			languageToSave.setCount(existingLanguage.get().getCount().intValue() + 1);
 		} else {
+			languageToSave.setId(UUID.randomUUID());
 			languageToSave.setLanguage(saved.getLanguage());
 			languageToSave.setCount(1);
 		}
+		LOGGER.info("languages: " + languageToSave);
 		languageRepo.save(languageToSave);
 
 		// update category
@@ -130,9 +150,12 @@ public class BookServiceMongoImpl implements BookService{
 			BeanUtils.copyProperties(existingCategory.get(), categoryToSave);
 			categoryToSave.setCount(existingCategory.get().getCount().intValue() + 1);
 		} else {
+			categoryToSave.setId(UUID.randomUUID());
 			categoryToSave.setCategory(saved.getCategory());
 			categoryToSave.setCount(1);
 		}
+
+		LOGGER.info("catetories" + categoryToSave);
 		categoryRepo.save(categoryToSave);
 
 

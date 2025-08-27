@@ -19,8 +19,6 @@ import org.springframework.util.backoff.FixedBackOff;
 @Configuration
 public class KafkaConfig {
 
-	@Value("${app.kafka.topics.orderCreated}")
-	private String orderCreatedTopic;
 	private final static Integer TOPIC_REPLICATION_FACTOR=3;
 	private final static Integer TOPIC_PARTITIONS=3;
 

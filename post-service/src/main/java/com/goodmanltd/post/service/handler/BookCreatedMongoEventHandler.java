@@ -1,18 +1,19 @@
 package com.goodmanltd.post.service.handler;
 
+import com.goodmanltd.core.dao.mongo.entity.BookMongoEntity;
+import com.goodmanltd.core.dao.mongo.entity.PostMongoEntity;
 import com.goodmanltd.core.dao.mongo.entity.mapper.BookMongoMapper;
+import com.goodmanltd.core.dao.mongo.repository.BookMongoRepository;
+import com.goodmanltd.core.dao.mongo.repository.PostMongoRepository;
 import com.goodmanltd.core.dto.events.BookCreatedEvent;
+import com.goodmanltd.core.dto.events.PostCreatedEvent;
 import com.goodmanltd.core.exceptions.NotRetryableException;
 import com.goodmanltd.core.exceptions.RetryableException;
 import com.goodmanltd.core.kafka.KafkaTopics;
 import com.goodmanltd.core.types.BookReference;
 import com.goodmanltd.core.types.PostStatus;
-import com.goodmanltd.core.dao.mongo.entity.BookMongoEntity;
 import com.goodmanltd.post.dao.mongo.entity.PendingPostMongoEntity;
-import com.goodmanltd.core.dao.mongo.entity.PostMongoEntity;
-import com.goodmanltd.core.dao.mongo.repository.BookMongoRepository;
 import com.goodmanltd.post.dao.mongo.repository.PendingPostMongoRepository;
-import com.goodmanltd.core.dao.mongo.repository.PostMongoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -21,6 +22,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.kafka.annotation.KafkaHandler;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Profile("mongo")
 @Component
@@ -39,12 +40,14 @@ public class BookCreatedMongoEventHandler {
 	private final BookMongoRepository bookRepository;
 	private final PendingPostMongoRepository pendingPostRepo;
 	private final PostMongoRepository postRepo;
+	private final KafkaTemplate<String, Object> kafkaTemplate;
 
-	public BookCreatedMongoEventHandler(BookMongoRepository bookRepository, PendingPostMongoRepository pendingPostRepo, PostMongoRepository postRepo) {
+	public BookCreatedMongoEventHandler(BookMongoRepository bookRepository, PendingPostMongoRepository pendingPostRepo, PostMongoRepository postRepo, KafkaTemplate<String, Object> kafkaTemplate) {
 
 		this.bookRepository = bookRepository;
 		this.pendingPostRepo = pendingPostRepo;
 		this.postRepo = postRepo;
+		this.kafkaTemplate = kafkaTemplate;
 	}
 
 
@@ -93,7 +96,7 @@ public class BookCreatedMongoEventHandler {
 
 		for (PendingPostMongoEntity pending : pendingPosts) {
 			PostMongoEntity post = new PostMongoEntity();
-			post.setId(UUID.randomUUID());
+			post.setId(pending.getId());
 			post.setPostBy(pending.getPostBy());
 			post.setBookRef(bookReference);
 			post.setLocation(pending.getLocation());
@@ -114,6 +117,13 @@ public class BookCreatedMongoEventHandler {
 		catch (DataIntegrityViolationException ex) {
 			LOGGER.error(ex.getMessage());
 			throw new NotRetryableException(ex);
+		}
+
+		// kafka
+		for(PostMongoEntity saved: postsToSave) {
+			PostCreatedEvent createNewPost = new PostCreatedEvent();
+			BeanUtils.copyProperties(saved, createNewPost);
+			kafkaTemplate.send(KafkaTopics.POST_CREATED, createNewPost);
 		}
 
 		pendingPostRepo.deleteAll(pendingPosts); // clean up

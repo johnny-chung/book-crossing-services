@@ -31,10 +31,15 @@ public class MessageController {
 
 	@PostMapping
 	@ResponseStatus(HttpStatus.ACCEPTED)
+	@PreAuthorize("isAuthenticated()")
 	public CreateMessageResponse createMessage(
-			@RequestBody @Valid CreateMessageRequest request)
+			@RequestBody @Valid CreateMessageRequest request,
+			@AuthenticationPrincipal Jwt jwt
+	)
+
 	{
-		Message createdMessage = messageService.createMessage(request);
+		String auth0Id = jwt.getClaimAsString("sub");
+		Message createdMessage = messageService.createMessage(request, auth0Id);
 
 		var response = new CreateMessageResponse();
 		BeanUtils.copyProperties(createdMessage, response);
@@ -42,14 +47,18 @@ public class MessageController {
 	}
 
 	@GetMapping("/conversation/{postId}")
+	@PreAuthorize("isAuthenticated()")
 	public GetConversationResponse getConversation(
 			@PathVariable UUID postId,
 			@RequestParam UUID participantId,
 			@RequestParam Number page,
-			@RequestParam UUID nextMsgId
+			@RequestParam Number limit,
+			@RequestParam(required = false) UUID startMsgId,
+			@RequestParam(required = false) UUID nextMsgId
 	) {
 		GetConversationRequest request =
-				new GetConversationRequest(postId, participantId, 25, page, nextMsgId);
+				new GetConversationRequest(
+						postId, participantId, page, 25, startMsgId, nextMsgId);
 		return messageService.getConversation(request);
 
 	}

@@ -13,16 +13,16 @@ import java.util.UUID;
 @NoArgsConstructor
 public class GetConversationRequest {
 	@NotNull
-	@NotBlank
 	private UUID postId;
 
 	@NotNull
-	@NotBlank
 	private UUID participantId;
 
-	private Number limit;
-
 	private Number page;
+
+	private Integer limit;
+
+	private UUID startMsgId;
 
 	private UUID nextMsgId;
 }

@@ -14,5 +14,5 @@ import java.util.UUID;
 public class CompleteOrderRequest {
 	@NotNull
 	@NotBlank
-	private UUID orderId;
+	private UUID id;
 }

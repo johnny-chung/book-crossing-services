@@ -20,6 +20,6 @@ public interface OrderMongoRepository extends
 
 		List<OrderMongoEntity> findByOrderBy_Id(UUID orderById);
 
-		List<OrderMongoEntity> findByPostRef_PostBy_Auth0Id(UUID postById);
-		List<OrderMongoEntity> findByOrderBy_Auth0Id(UUID orderById);
+		List<OrderMongoEntity> findByPostRef_PostBy_Auth0Id(String auth0Id);
+		List<OrderMongoEntity> findByOrderBy_Auth0Id(String auth0Id);
 }

@@ -1,7 +1,6 @@
 package com.goodmanltd.post.dao.mongo.entity.mapper;
 
 import com.goodmanltd.core.types.MemberReference;
-import com.goodmanltd.core.types.OrderReference;
 import com.goodmanltd.core.types.Post;
 import com.goodmanltd.post.dao.mongo.entity.PendingPostMongoEntity;
 import org.springframework.beans.BeanUtils;
