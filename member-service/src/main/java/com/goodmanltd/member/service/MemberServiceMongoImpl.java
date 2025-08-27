@@ -52,7 +52,8 @@ public class MemberServiceMongoImpl implements MemberService{
 		newMemberEntity.setCreatedAt(LocalDateTime.now());
 		newMemberEntity.setReservationCnt(0);
 		newMemberEntity.setAnnualTotalReservations(0);
-		newMemberEntity.setStatus(MemberStatus.PENDING);
+		//newMemberEntity.setStatus(MemberStatus.PENDING);
+		newMemberEntity.setStatus(MemberStatus.BASIC);
 
 		MemberMongoEntity saved = memberRepository.save(newMemberEntity);
 
