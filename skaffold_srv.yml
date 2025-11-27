@@ -3,9 +3,13 @@ kind: Config
 
 manifests:
   rawYaml:
-    - ./infra/k8s/*
-#    - ./infra/k8s/ingress-depl.yml
-#    - ./infra/k8s/message-service-depl.yml
+    - ./infra/k8s/ingress-traefik-depl.yml
+    - ./infra/k8s/echo-depl.yml
+    - ./infra/k8s/book-service-depl.yml
+    - ./infra/k8s/post-service-depl.yml
+    - ./infra/k8s/order-service-depl.yml
+    - ./infra/k8s/member-service-depl.yml
+    - ./infra/k8s/message-service-depl.yml
 
 profiles:
   - name: prod
@@ -16,10 +20,14 @@ profiles:
         releases:
           - name: kafka
             remoteChart: kafka
-            repo: https://charts.bitnami.com/bitnami
+            repo: oci://registry-1.docker.io/bitnamicharts/kafka #bitnami no longer free -> use legacy one
+            version: 32.4.3
             setValues:
+              image.registry: docker.io
+              image.repository: bitnamilegacy/kafka
+              image.tags: 4.0.0-debian-12-r10
               controller:
-                replicaCount: 1
+                replicaCount: 3
               listeners:
                 client:
                   protocol: plaintext
@@ -27,15 +35,3 @@ profiles:
                   protocol: plaintext
                 interbroker:
                   protocol: plaintext
-
-
-#portForward:
-#  - resourceType: service
-#    resourceName: book-service-srv
-#    port: 8081
-#    localPort: 8081
-#  - resourceType: service
-#    resourceName: member-service-srv
-#    port: 8087
-#    localPort: 8087
-

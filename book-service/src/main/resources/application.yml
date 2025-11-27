@@ -5,10 +5,10 @@ spring:
   kafka:
     bootstrap-servers: |
       kafka.default.svc.cluster.local:9092
-#      localhost:9092,localhost:9093,localhost:9094
-#      kafka-controller-0.kafka-controller-headless.default.svc.cluster.local:9092
+#      kafka-controller-0.kafka-controller-headless.default.svc.cluster.local:9092,
 #      kafka-controller-1.kafka-controller-headless.default.svc.cluster.local:9092,
 #      kafka-controller-2.kafka-controller-headless.default.svc.cluster.local:9092
+#      localhost:9092,localhost:9093,localhost:9094
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer

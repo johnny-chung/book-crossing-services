@@ -39,9 +39,9 @@ deploy:
   helm:
     releases:
       - name: kafka
-#        remoteChart: kafka
-#        repo: https://charts.bitnami.com/bitnami
-        chartPath: ./kafka
+#        chartPath: ./kafka
+        remoteChart: kafka
+        repo: https://charts.bitnami.com/bitnami
         setValues:
           replicaCount: "3"
           listeners:

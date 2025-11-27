@@ -8,36 +8,36 @@ spec:
     - host: bookcrossing-api.goodmanltd.com
       http:
         paths:
-          - path: /books(/|$)(.*)
-            pathType: ImplementationSpecific
+          - path: /books
+            pathType: Prefix #traefix don't support regix
             backend:
               service:
                 name: book-service-srv
                 port:
                   number: 8081
-          - path: /orders(/|$)(.*)
-            pathType: ImplementationSpecific
+          - path: /orders
+            pathType: Prefix
             backend:
               service:
                 name: order-service-srv
                 port:
                   number: 8083
-          - path: /posts(/|$)(.*)
-            pathType: ImplementationSpecific
+          - path: /posts
+            pathType: Prefix
             backend:
               service:
                 name: post-service-srv
                 port:
                   number: 8085
-          - path: /members(/|$)(.*)
-            pathType: ImplementationSpecific
+          - path: /members
+            pathType: Prefix
             backend:
               service:
                 name: member-service-srv
                 port:
                   number: 8087
-          - path: /messages(/|$)(.*)
-            pathType: ImplementationSpecific
+          - path: /messages
+            pathType: Prefix
             backend:
               service:
                 name: message-service-srv
