@@ -11,6 +11,9 @@ import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
@@ -25,9 +28,23 @@ public class SecurityConfig {
 	private String issuerUri;
 
 	@Bean
+	public CorsConfigurationSource corsConfigurationSource() {
+		CorsConfiguration cfg = new CorsConfiguration();
+		// If you do NOT need cookies: allow all origins
+		cfg.setAllowedOriginPatterns(List.of("*"));
+		cfg.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
+		cfg.setAllowedHeaders(List.of("Authorization","Content-Type"));
+		cfg.setAllowCredentials(false); // keep false when using "*"
+		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+		source.registerCorsConfiguration("/**", cfg);
+		return source;
+	}
+
+	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http
 				.csrf(csrf -> csrf.disable())
+				.cors(c -> {}) // enable CORS
 				.authorizeHttpRequests(auth -> auth
 				//.requestMatchers(HttpMethod.POST, "/books").authenticated()
 				.anyRequest().permitAll()

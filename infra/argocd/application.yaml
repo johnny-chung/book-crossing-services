@@ -1,0 +1,53 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: book-crossing-services
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/johnny-chung/book-crossing-services.git
+    targetRevision: HEAD
+    path: infra/k8s  # This points to the folder containing kustomization.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+# This part handles Kafka (replacing the Helm part of Skaffold)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kafka
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: registry-1.docker.io/bitnamicharts
+    chart: kafka
+    targetRevision: 32.4.3
+    helm:
+      values: |
+        image:
+          registry: docker.io
+          repository: bitnamilegacy/kafka
+          tag: 4.0.0-debian-12-r10
+        controller:
+          replicaCount: 3
+        listeners:
+          client:
+            protocol: plaintext
+          controller:
+            protocol: plaintext
+          interbroker:
+            protocol: plaintext
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

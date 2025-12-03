@@ -20,11 +20,11 @@ profiles:
         releases:
           - name: kafka
             remoteChart: kafka
-            repo: oci://registry-1.docker.io/bitnamicharts/kafka #bitnami no longer free -> use legacy one
+            repo: oci://registry-1.docker.io/bitnamicharts/kafka 
             version: 32.4.3
             setValues:
               image.registry: docker.io
-              image.repository: bitnamilegacy/kafka
+              image.repository: bitnamilegacy/kafka #bitnami no longer free -> use legacy one
               image.tags: 4.0.0-debian-12-r10
               controller:
                 replicaCount: 3
