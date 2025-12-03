@@ -28,13 +28,16 @@ This repository contains multiple services:
 ## Technology Stack
 
 - ![Java](https://img.shields.io/badge/Java-21-blue?logo=java) **Java 21** (Eclipse Temurin JDK)
-- ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen?logo=springboot) **Spring Boot** (with Data MongoDB, Web, etc.)
+- ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.x-brightgreen?logo=springboot) **Spring Boot 3.5.x** (Web, Data MongoDB, Kafka)
 - ![MongoDB](https://img.shields.io/badge/MongoDB-6.x-green?logo=mongodb) **MongoDB**
 - ![Apache Kafka](https://img.shields.io/badge/Kafka-3.x-black?logo=apachekafka) **Apache Kafka** (Bitnami Helm Chart)
 - ![Docker](https://img.shields.io/badge/Docker-24.x-blue?logo=docker) **Docker**
-- ![Kubernetes](https://img.shields.io/badge/Kubernetes-1.23+-blue?logo=kubernetes) **Kubernetes**
-- ![Gradle](https://img.shields.io/badge/Gradle-8.x-green?logo=gradle) **Gradle** (build tool)
-- ![Helm](https://img.shields.io/badge/Helm-3.8.0+-blue?logo=helm) **Helm** (for managing Kubernetes charts)
+- ![Kubernetes](https://img.shields.io/badge/Kubernetes-1.25%2B-blue?logo=kubernetes) **Kubernetes 1.25+**
+- ![Gradle](https://img.shields.io/badge/Gradle-8.x-green?logo=gradle) **Gradle**
+- ![Helm](https://img.shields.io/badge/Helm-3.8%2B-blue?logo=helm) **Helm 3.8+**
+- ![ArgoCD](https://img.shields.io/badge/ArgoCD-2.11%2B-orange?logo=argo) **ArgoCD** (GitOps CD)
+- ![Kustomize](https://img.shields.io/badge/Kustomize-built--in-blue?logo=kubernetes) **Kustomize** (native in kubectl/ArgoCD)
+- ![Cloudflare](https://img.shields.io/badge/Cloudflare%20Tunnel-enabled-orange?logo=cloudflare) **Cloudflare Tunnel** (ingress exposure)
 
 ## Project Structure
 
@@ -53,6 +56,37 @@ This repository contains multiple services:
 - **Helm 3.8.0+**
 - **MongoDB** (local or cloud instance)
 - **PV provisioner support** in your Kubernetes cluster (for Kafka persistence)
+
+## Deploy with ArgoCD (Option B)
+
+This repo includes ArgoCD and Kustomize support out of the box.
+
+- ArgoCD Applications: see `infra/argocd/application.yaml`.
+- Kustomize base: see `infra/k8s/kustomization.yaml` (lists service and ingress manifests).
+- Kafka via Helm: configured inside the ArgoCD Application (Bitnami Kafka chart).
+
+Quick start:
+
+1. Install ArgoCD (one-time):
+   ```bash
+   kubectl create namespace argocd
+   kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+   ```
+2. Apply Applications:
+   ```bash
+   kubectl apply -f infra/argocd/application.yaml
+   ```
+3. Access ArgoCD UI locally:
+   ```bash
+   kubectl port-forward svc/argocd-server -n argocd 8080:443
+   # then open https://localhost:8080 (user: admin, password from argocd-initial-admin-secret)
+   ```
+
+Notes:
+
+- No extra install is needed for Kustomize; it’s built into kubectl and ArgoCD.
+- If you use Cloudflare Tunnel with Traefik, your ingress ports remain unchanged; ArgoCD just applies the same YAML.
+- CI builds: add `.github/workflows/build-push.yaml` to build `bootJar` per service and push images; configure repo secrets `DOCKER_USERNAME` and `DOCKER_PASSWORD`.
 
 ## Setup & Running Locally
 
@@ -147,7 +181,6 @@ Refer to each service's `application.yml` or deployment manifest for details.
 ## Upgrading
 
 Refer to the Kafka and Helm chart documentation for upgrade notes and breaking changes.
-
 
 ## Contribution
 
