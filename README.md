@@ -35,6 +35,7 @@ This repository contains multiple services:
 - ![Kubernetes](https://img.shields.io/badge/Kubernetes-1.25%2B-blue?logo=kubernetes) **Kubernetes 1.25+**
 - ![Gradle](https://img.shields.io/badge/Gradle-8.x-green?logo=gradle) **Gradle**
 - ![Helm](https://img.shields.io/badge/Helm-3.8%2B-blue?logo=helm) **Helm 3.8+**
+- ![Skaffold](https://img.shields.io/badge/Skaffold-2.x-blue?logo=googlecloud) **Skaffold** (local dev & CI/CD orchestration)
 - ![ArgoCD](https://img.shields.io/badge/ArgoCD-2.11%2B-orange?logo=argo) **ArgoCD** (GitOps CD)
 - ![Kustomize](https://img.shields.io/badge/Kustomize-built--in-blue?logo=kubernetes) **Kustomize** (native in kubectl/ArgoCD)
 - ![Cloudflare](https://img.shields.io/badge/Cloudflare%20Tunnel-enabled-orange?logo=cloudflare) **Cloudflare Tunnel** (ingress exposure)
@@ -57,7 +58,7 @@ This repository contains multiple services:
 - **MongoDB** (local or cloud instance)
 - **PV provisioner support** in your Kubernetes cluster (for Kafka persistence)
 
-## Deploy with ArgoCD (Option B)
+## Deploy with ArgoCD (Option A)
 
 This repo includes ArgoCD and Kustomize support out of the box.
 
@@ -87,6 +88,47 @@ Notes:
 - No extra install is needed for Kustomize; it’s built into kubectl and ArgoCD.
 - If you use Cloudflare Tunnel with Traefik, your ingress ports remain unchanged; ArgoCD just applies the same YAML.
 - CI builds: add `.github/workflows/build-push.yaml` to build `bootJar` per service and push images; configure repo secrets `DOCKER_USERNAME` and `DOCKER_PASSWORD`.
+
+## Deploy with Skaffold (Option B)
+
+Skaffold is the primary local development workflow. It watches source changes, builds images, and deploys manifests.
+
+Configurations:
+
+- `skaffold.yml`: default pipeline for cluster/dev.
+- `skaffold-local.yml`: overrides for local-only setup (e.g., local registry or image tags).
+- `skaffold_srv.yml`: service-focused pipeline.
+
+Prerequisites:
+
+- Docker running
+- Kubernetes context set (minikube/kind/docker-desktop)
+- Optional: local registry access if configured in overrides
+
+Common commands (Windows bash):
+
+```bash
+# Dry-run to preview
+skaffold diagnose -f skaffold.yml
+
+# Option A.1: Run dev loop (auto build & deploy on changes)
+skaffold dev -f skaffold.yml
+
+# Option A.2: Use local overrides
+skaffold dev -f skaffold.yml -f skaffold-local.yml
+
+# Option A.3: One-off build and deploy
+skaffold run -f skaffold.yml
+
+# Option A.4: Select the service-focused pipeline
+skaffold dev -f skaffold_srv.yml
+```
+
+Notes:
+
+- Skaffold will use `infra/k8s/` manifests and respect kustomization/ingress settings if referenced in the pipeline.
+- Ensure Kafka and MongoDB are reachable from the cluster; you can deploy Kafka via Helm first (see below) or point to external brokers.
+- To speed up image builds, use Docker BuildKit and enable local caching. If you use a remote registry, configure credentials before `skaffold dev`.
 
 ## Setup & Running Locally
 
